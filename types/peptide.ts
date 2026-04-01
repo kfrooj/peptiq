@@ -1,0 +1,17 @@
+export type Peptide = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  benefits: string | null;
+  typical_research_protocol: string | null;
+  duration: string | null;
+  common_sides_regulatory: string | null;
+  most_popular_stacks: string | null;
+  general_administration_rules: string | null;
+  references: string | null;
+  disclaimer: string;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+};
