@@ -44,6 +44,16 @@ export default function SiteHeader() {
             Home
           </Link>
 
+<Link
+  href="/calculator"
+  className={getLinkClass(pathname === "/calculator")}
+  style={{
+    backgroundColor: pathname === "/calculator" ? "var(--color-accent)" : "transparent",
+  }}
+>
+  Calculator
+</Link>
+
           <Link
             href="/admin/login"
             className={getLinkClass(isAdminActive)}
