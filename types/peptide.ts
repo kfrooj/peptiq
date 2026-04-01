@@ -12,6 +12,9 @@ export type Peptide = {
   references: string | null;
   disclaimer: string;
   published: boolean;
+  featured: boolean;
+  featured_order: number | null;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 };

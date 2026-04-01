@@ -24,15 +24,36 @@ export default async function AdminPeptidesPage() {
     </p>
   </div>
 
-  <div className="flex items-center gap-3">
-    <Link
-  href="/admin/peptides/new"
-  className="rounded-xl bg-[var(--color-accent)] px-4 py-2 text-white shadow-sm transition hover:opacity-90"
->
-  Add peptide
-</Link>
-    <AdminLogoutButton />
-  </div>
+  <div className="flex flex-wrap items-center gap-3">
+  {/* Secondary actions */}
+  <Link
+    href="/api/admin/export"
+    className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+  >
+    Export CSV
+  </Link>
+
+  <Link
+    href="/admin/import"
+    className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+  >
+    Import CSV
+  </Link>
+
+  {/* Primary action */}
+  <Link
+    href="/admin/peptides/new"
+    className="rounded-xl bg-[var(--color-accent)] px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+  >
+    Add peptide
+  </Link>
+
+  {/* Spacer */}
+  <div className="flex-1" />
+
+  {/* Utility */}
+  <AdminLogoutButton />
+</div>
 </div>
 
       <div className="overflow-hidden rounded-xl border">

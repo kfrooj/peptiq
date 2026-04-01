@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ImageUploadField from "@/components/ImageUploadField";
 
 function slugify(value: string) {
   return value
@@ -27,6 +28,9 @@ type Props = {
     references?: string;
     disclaimer?: string;
     published?: boolean;
+    featured?: boolean;
+    featured_order?: number | null;
+    image_url: string | null;
   };
 };
 
@@ -58,6 +62,11 @@ export default function AdminPeptideForm({ peptide }: Props) {
       "For research purposes only. Not medical advice. Not for human consumption."
   );
   const [published, setPublished] = useState(peptide?.published ?? true);
+  const [featured, setFeatured] = useState(peptide?.featured ?? false);
+  const [featuredOrder, setFeaturedOrder] = useState(
+  peptide?.featured_order?.toString() ?? ""
+);
+  const [imageUrl, setImageUrl] = useState(peptide?.image_url ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +88,9 @@ export default function AdminPeptideForm({ peptide }: Props) {
       references,
       disclaimer,
       published,
+      featured,
+      featured_order: featuredOrder ? Number(featuredOrder) : null,
+      image_url: imageUrl,
     };
 
     const query = peptide?.id
@@ -127,7 +139,24 @@ export default function AdminPeptideForm({ peptide }: Props) {
           onChange={(e) => setCategory(e.target.value)}
           required
         />
-      </Field>
+</Field>
+        <div className="grid gap-4">
+  <Field label="Image URL">
+    <input
+      className="w-full rounded-md border px-3 py-2"
+      value={imageUrl}
+      onChange={(e) => setImageUrl(e.target.value)}
+      placeholder="https://example.com/peptide-image.jpg"
+    />
+  </Field>
+
+  <ImageUploadField
+    value={imageUrl}
+    onChange={setImageUrl}
+    slug={slug || name.toLowerCase().replace(/\s+/g, "-")}
+  />
+</div>
+
 
       <TextArea label="Benefits" value={benefits} onChange={setBenefits} />
       <TextArea
@@ -158,14 +187,37 @@ export default function AdminPeptideForm({ peptide }: Props) {
 />
       <TextArea label="Disclaimer" value={disclaimer} onChange={setDisclaimer} />
 
-      <label className="flex items-center gap-2 text-sm font-medium">
-        <input
-          type="checkbox"
-          checked={published}
-          onChange={(e) => setPublished(e.target.checked)}
-        />
-        Published
-      </label>
+     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+  <label className="flex items-center gap-2 text-sm font-medium">
+    <input
+      type="checkbox"
+      checked={published}
+      onChange={(e) => setPublished(e.target.checked)}
+    />
+    Published
+  </label>
+
+  <label className="flex items-center gap-2 text-sm font-medium">
+    <input
+      type="checkbox"
+      checked={featured}
+      onChange={(e) => setFeatured(e.target.checked)}
+    />
+    Featured on homepage
+  </label>
+
+<Field label="Featured order">
+  <input
+    type="number"
+    min="1"
+    className="w-full rounded-md border px-3 py-2"
+    value={featuredOrder}
+    onChange={(e) => setFeaturedOrder(e.target.value)}
+    placeholder="1"
+  />
+</Field>
+
+</div>
 
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

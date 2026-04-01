@@ -33,3 +33,19 @@ export async function getPeptideBySlug(slug: string): Promise<Peptide | null> {
 
   return data;
 }
+
+export async function getFeaturedPeptides(): Promise<Peptide[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("peptides")
+    .select("*")
+    .eq("published", true)
+    .eq("featured", true)
+    .order("featured_order", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return data ?? [];
+}
