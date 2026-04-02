@@ -53,14 +53,14 @@ export default async function HomePage() {
       </div>
     </div>
 
-    <div className="grid items-start gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+    <div className="grid gap-5 lg:h-[520px] lg:grid-cols-[1.35fr_0.65fr]">
       {/* Hero featured peptide */}
  {featuredPeptides[0] ? (
   <Link
     href={`/peptides/${featuredPeptides[0].slug}`}
     className="group relative block overflow-hidden rounded-3xl border border-[var(--color-border)] shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-lg"
   >
-    <div className="relative h-[420px] w-full overflow-hidden rounded-[inherit] md:h-[520px]">
+    <div className="relative h-[420px] w-full overflow-hidden rounded-[inherit] md:h-[520px] lg:h-full">
       {featuredPeptides[0].image_url ? (
         <img
           src={featuredPeptides[0].image_url}
@@ -110,14 +110,14 @@ export default async function HomePage() {
 
 
       {/* Supporting featured peptides */}
-     <div className="grid gap-5">
+     <div className="grid self-start gap-5 lg:h-full lg:grid-rows-2">
   {featuredPeptides.slice(1, 4).map((peptide) => (
     <Link
       key={peptide.id}
       href={`/peptides/${peptide.slug}`}
-      className="group relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm transition hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-lg"
+      className="group relative block overflow-hidden rounded-3xl border border-[var(--color-border)] shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-lg"
     >
-      <div className="relative h-[260px] w-full">
+      <div className="relative h-[245px] w-full overflow-hidden rounded-[inherit] lg:h-full">
         {peptide.image_url ? (
           <img
             src={peptide.image_url}
@@ -134,7 +134,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
 
         {/* Top badges */}
-        <div className="absolute left-4 top-4 right-4 flex items-start justify-between gap-3">
+        <div className="absolute left-4 top-3 right-4 flex items-start justify-between gap-3">
           <div className="inline-flex rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
             Featured
           </div>
