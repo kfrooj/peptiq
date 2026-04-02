@@ -60,34 +60,79 @@ export default async function AdminPeptidesPage() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b bg-gray-50 text-left">
-              <th className="px-4 py-3 text-sm font-semibold">Name</th>
-              <th className="px-4 py-3 text-sm font-semibold">Category</th>
-              <th className="px-4 py-3 text-sm font-semibold">Published</th>
-              <th className="px-4 py-3 text-sm font-semibold">Action</th>
-            </tr>
+  <th className="px-4 py-3 text-sm font-semibold">Name</th>
+  <th className="px-4 py-3 text-sm font-semibold">Category</th>
+  <th className="px-4 py-3 text-sm font-semibold">Calculator defaults</th>
+  <th className="px-4 py-3 text-sm font-semibold">Published</th>
+  <th className="px-4 py-3 text-sm font-semibold">Action</th>
+</tr>
           </thead>
           <tbody>
             {peptides?.map((peptide) => (
-              <tr key={peptide.id} className="border-b last:border-b-0">
-                <td className="px-4 py-3 text-sm">{peptide.name}</td>
-                <td className="px-4 py-3 text-sm">{peptide.category}</td>
-                <td className="px-4 py-3 text-sm">
-                  {peptide.published ? "Yes" : "No"}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  <Link
-                    href={`/admin/peptides/${peptide.id}/edit`}
-                    className="text-blue-600 underline"
-                  >
-                    Edit
-                  </Link>
-                </td>
-              </tr>
+             <tr key={peptide.id} className="border-b last:border-b-0">
+  <td className="px-4 py-3 text-sm font-medium">{peptide.name}</td>
+  <td className="px-4 py-3 text-sm">{peptide.category}</td>
+
+  <td className="px-4 py-3 text-sm">
+  {peptide.default_vial_mg ||
+  peptide.default_mixing_volume_ml ||
+  peptide.default_sample_size_mcg ? (
+    <div className="flex flex-wrap gap-2">
+      {peptide.default_vial_mg ? (
+        <span
+          title="Default vial amount"
+          className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700"
+        >
+          {peptide.default_vial_mg} mg
+        </span>
+      ) : null}
+
+      {peptide.default_mixing_volume_ml ? (
+        <span
+          title="Default mixing volume"
+          className="rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700"
+        >
+          {peptide.default_mixing_volume_ml} mL
+        </span>
+      ) : null}
+
+      {peptide.default_sample_size_mcg ? (
+        <span
+          title="Default sample size"
+          className="rounded-full bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700"
+        >
+          {peptide.default_sample_size_mcg} mcg
+        </span>
+      ) : null}
+    </div>
+  ) : (
+    <span
+      title="No calculator defaults set"
+      className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500"
+    >
+      Not set
+    </span>
+  )}
+</td>
+
+  <td className="px-4 py-3 text-sm">
+    {peptide.published ? "Yes" : "No"}
+  </td>
+
+  <td className="px-4 py-3 text-sm">
+    <Link
+      href={`/admin/peptides/${peptide.id}/edit`}
+      className="text-blue-600 underline"
+    >
+      Edit
+    </Link>
+  </td>
+</tr>
             ))}
 
             {!peptides?.length ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-sm text-gray-500">
+                <td colSpan={5} className="px-4 py-6 text-sm text-gray-500">
                   No peptides found.
                 </td>
               </tr>

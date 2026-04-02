@@ -15,6 +15,9 @@ export type Peptide = {
   featured: boolean;
   featured_order: number | null;
   image_url: string | null;
+  default_vial_mg: number | null;
+default_mixing_volume_ml: number | null;
+default_sample_size_mcg: number | null;
   created_at: string;
   updated_at: string;
 };

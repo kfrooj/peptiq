@@ -53,58 +53,121 @@ export default async function HomePage() {
       </div>
     </div>
 
-    <div className="grid gap-5 md:grid-cols-3">
-      {featuredPeptides.map((peptide) => (
-        <Link
-          key={peptide.id}
-          href={`/peptides/${peptide.slug}`}
-          className="group overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm transition hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-lg"
-        >
-          <div className="relative">
-            {peptide.image_url ? (
-              <img
-                src={peptide.image_url}
-                alt={peptide.name}
-                className="h-52 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-              />
-            ) : (
-              <div className="flex h-52 w-full items-center justify-center bg-[var(--color-surface-muted)] text-sm text-[var(--color-muted)]">
-                No image available
-              </div>
-            )}
+    <div className="grid items-start gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+      {/* Hero featured peptide */}
+ {featuredPeptides[0] ? (
+  <Link
+    href={`/peptides/${featuredPeptides[0].slug}`}
+    className="group relative block overflow-hidden rounded-3xl border border-[var(--color-border)] shadow-sm transition-transform duration-300 hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-lg"
+  >
+    <div className="relative h-[420px] w-full overflow-hidden rounded-[inherit] md:h-[520px]">
+      {featuredPeptides[0].image_url ? (
+        <img
+          src={featuredPeptides[0].image_url}
+          alt={featuredPeptides[0].name}
+          className="absolute inset-0 block h-[101%] w-[101%] object-cover object-center transition duration-500 group-hover:scale-[1.03]"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-surface-muted)] text-sm text-[var(--color-muted)]">
+          No image available
+        </div>
+      )}
 
-            <div className="absolute left-4 top-4 inline-flex rounded-full bg-black/75 px-3 py-1 text-xs font-medium text-white">
-              Featured
-            </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
+
+      <div className="absolute left-5 top-5 right-5 flex items-start justify-between gap-3">
+        <div className="inline-flex rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          Featured
+        </div>
+
+        {featuredPeptides[0].featured_order ? (
+          <span className="rounded-full bg-blue-500/90 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            #{featuredPeptides[0].featured_order}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+        <p className="mb-2 text-sm font-medium text-white/80">
+          {featuredPeptides[0].category}
+        </p>
+
+        <h3 className="max-w-3xl text-2xl font-semibold leading-tight text-white md:text-4xl">
+          {featuredPeptides[0].name}
+        </h3>
+
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-white/85 md:text-base">
+          {featuredPeptides[0].benefits || "No summary added yet."}
+        </p>
+
+        <div className="mt-5 inline-flex items-center text-sm font-medium text-blue-300">
+          View peptide →
+        </div>
+      </div>
+    </div>
+  </Link>
+) : null}
+
+
+      {/* Supporting featured peptides */}
+     <div className="grid gap-5">
+  {featuredPeptides.slice(1, 4).map((peptide) => (
+    <Link
+      key={peptide.id}
+      href={`/peptides/${peptide.slug}`}
+      className="group relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm transition hover:-translate-y-1 hover:border-[var(--color-accent)] hover:shadow-lg"
+    >
+      <div className="relative h-[260px] w-full">
+        {peptide.image_url ? (
+          <img
+            src={peptide.image_url}
+            alt={peptide.name}
+            className="absolute inset-0 h-full w-full object-cover object-center transition duration-500 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-surface-muted)] text-sm text-[var(--color-muted)]">
+            No image available
+          </div>
+        )}
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
+
+        {/* Top badges */}
+        <div className="absolute left-4 top-4 right-4 flex items-start justify-between gap-3">
+          <div className="inline-flex rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            Featured
           </div>
 
-          <div className="p-5">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                {peptide.name}
-              </h3>
+          {peptide.featured_order ? (
+            <span className="rounded-full bg-blue-500/90 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+              #{peptide.featured_order}
+            </span>
+          ) : null}
+        </div>
 
-              {peptide.featured_order ? (
-                <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-                  #{peptide.featured_order}
-                </span>
-              ) : null}
-            </div>
+        {/* Content on image */}
+        <div className="absolute inset-x-0 bottom-0 p-5">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-white/75">
+            {peptide.category}
+          </p>
 
-            <p className="text-sm text-[var(--color-muted)]">
-              {peptide.category}
-            </p>
+          <h3 className="text-xl font-semibold leading-tight text-white">
+            {peptide.name}
+          </h3>
 
-            <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--color-muted)]">
-              {peptide.benefits || "No summary added yet."}
-            </p>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/85">
+            {peptide.benefits || "No summary added yet."}
+          </p>
 
-            <div className="mt-4 inline-flex items-center text-sm font-medium text-[var(--color-accent)]">
-              View peptide →
-            </div>
+          <div className="mt-4 inline-flex items-center text-sm font-medium text-blue-300">
+            View peptide →
           </div>
-        </Link>
-      ))}
+        </div>
+      </div>
+    </Link>
+  ))}
+</div>
     </div>
   </section>
 ) : null}

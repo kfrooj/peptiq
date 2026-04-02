@@ -1,6 +1,16 @@
-import PeptideCalculator from "@/components/PeptideCalculator";
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import PeptideCalculator from "../../components/PeptideCalculator";
 
 export default function CalculatorPage() {
+  const searchParams = useSearchParams();
+
+  const peptideName = searchParams.get("peptide") ?? "";
+  const initialVialMg = searchParams.get("vialMg") ?? "";
+  const initialMixingVolumeMl = searchParams.get("mixMl") ?? "";
+  const initialSampleMcg = searchParams.get("sampleMcg") ?? "";
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
       <section className="mb-8 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-sm">
@@ -16,9 +26,20 @@ export default function CalculatorPage() {
           Calculate concentration, required volume, and syringe units for research
           preparation. This tool is for informational and research purposes only.
         </p>
+
+        {peptideName ? (
+          <div className="mt-5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+            Selected peptide: {peptideName}
+          </div>
+        ) : null}
       </section>
 
-      <PeptideCalculator />
+      <PeptideCalculator
+        initialPeptideName={peptideName}
+        initialVialMg={initialVialMg}
+        initialMixingVolumeMl={initialMixingVolumeMl}
+        initialSampleMcg={initialSampleMcg}
+      />
 
       <section className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-6">
         <h2 className="text-lg font-semibold text-[var(--color-text)]">

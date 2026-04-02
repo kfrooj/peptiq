@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getPeptideBySlug } from "@/lib/peptides";
+import Link from "next/link";
 
 export default async function PeptideDetailPage({
   params,
@@ -17,14 +18,27 @@ export default async function PeptideDetailPage({
     <main className="mx-auto max-w-5xl p-6">
       <div className="mb-8 overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-gray-50">
         <div className="p-8">
-          <p className="mb-3 inline-block rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-600">
-            {peptide.category}
-          </p>
-          <h1 className="text-4xl font-bold tracking-tight">{peptide.name}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
-            Structured research information for educational and informational browsing.
-          </p>
-        </div>
+  <p className="mb-3 inline-block rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-600">
+    {peptide.category}
+  </p>
+  <h1 className="text-4xl font-bold tracking-tight">{peptide.name}</h1>
+  <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
+    Structured research information for educational and informational browsing.
+  </p>
+
+  <div className="mt-5">
+    <Link
+      href={`/calculator?peptide=${encodeURIComponent(
+  peptide.name
+)}&vialMg=${peptide.default_vial_mg ?? ""}&mixMl=${
+  peptide.default_mixing_volume_ml ?? ""
+}&sampleMcg=${peptide.default_sample_size_mcg ?? ""}`}
+      className="inline-flex rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+    >
+      Open in calculator
+    </Link>
+  </div>
+</div>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">

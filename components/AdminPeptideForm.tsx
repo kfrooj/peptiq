@@ -31,6 +31,9 @@ type Props = {
     featured?: boolean;
     featured_order?: number | null;
     image_url: string | null;
+    default_vial_mg?: number | null;
+default_mixing_volume_ml?: number | null;
+default_sample_size_mcg?: number | null;
   };
 };
 
@@ -67,6 +70,17 @@ export default function AdminPeptideForm({ peptide }: Props) {
   peptide?.featured_order?.toString() ?? ""
 );
   const [imageUrl, setImageUrl] = useState(peptide?.image_url ?? "");
+  const [defaultVialMg, setDefaultVialMg] = useState(
+  peptide?.default_vial_mg?.toString() ?? ""
+);
+
+const [defaultMixingVolumeMl, setDefaultMixingVolumeMl] = useState(
+  peptide?.default_mixing_volume_ml?.toString() ?? ""
+);
+
+const [defaultSampleSizeMcg, setDefaultSampleSizeMcg] = useState(
+  peptide?.default_sample_size_mcg?.toString() ?? ""
+);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +105,13 @@ export default function AdminPeptideForm({ peptide }: Props) {
       featured,
       featured_order: featuredOrder ? Number(featuredOrder) : null,
       image_url: imageUrl,
+      default_vial_mg: defaultVialMg ? Number(defaultVialMg) : null,
+default_mixing_volume_ml: defaultMixingVolumeMl
+  ? Number(defaultMixingVolumeMl)
+  : null,
+default_sample_size_mcg: defaultSampleSizeMcg
+  ? Number(defaultSampleSizeMcg)
+  : null,
     };
 
     const query = peptide?.id
@@ -149,6 +170,44 @@ export default function AdminPeptideForm({ peptide }: Props) {
       placeholder="https://example.com/peptide-image.jpg"
     />
   </Field>
+
+  <div className="grid gap-4 md:grid-cols-3">
+  <Field label="Default vial amount (mg)">
+    <input
+      type="number"
+      min="0.01"
+      step="0.01"
+      className="w-full rounded-md border px-3 py-2"
+      value={defaultVialMg}
+      onChange={(e) => setDefaultVialMg(e.target.value)}
+      placeholder="5"
+    />
+  </Field>
+
+  <Field label="Default mixing volume (mL)">
+    <input
+      type="number"
+      min="0.01"
+      step="0.01"
+      className="w-full rounded-md border px-3 py-2"
+      value={defaultMixingVolumeMl}
+      onChange={(e) => setDefaultMixingVolumeMl(e.target.value)}
+      placeholder="2"
+    />
+  </Field>
+
+  <Field label="Default sample size (mcg)">
+    <input
+      type="number"
+      min="1"
+      step="1"
+      className="w-full rounded-md border px-3 py-2"
+      value={defaultSampleSizeMcg}
+      onChange={(e) => setDefaultSampleSizeMcg(e.target.value)}
+      placeholder="250"
+    />
+  </Field>
+</div>
 
   <ImageUploadField
     value={imageUrl}

@@ -2,6 +2,13 @@
 
 import { useMemo, useState } from "react";
 
+type Props = {
+  initialPeptideName?: string;
+  initialVialMg?: string;
+  initialMixingVolumeMl?: string;
+  initialSampleMcg?: string;
+};
+
 const vialOptions = [
   { label: "1 mg", value: 1 },
   { label: "2 mg", value: 2 },
@@ -19,13 +26,34 @@ function round(value: number, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
 
-export default function PeptideCalculator() {
-  const [useCustomVial, setUseCustomVial] = useState(false);
-  const [selectedVialMg, setSelectedVialMg] = useState(5);
-  const [customVialMg, setCustomVialMg] = useState("5");
-  const [mixingVolumeMl, setMixingVolumeMl] = useState("2");
-  const [desiredAmountMcg, setDesiredAmountMcg] = useState("250");
+export default function PeptideCalculator({
+  initialPeptideName = "",
+  initialVialMg = "",
+  initialMixingVolumeMl = "",
+  initialSampleMcg = "",
+}: Props) {
+  const initialVialNumber = Number(initialVialMg);
+  const matchedPreset = vialOptions.find(
+    (option) => option.value === initialVialNumber
+  );
+
+  const [useCustomVial, setUseCustomVial] = useState(
+    !!initialVialMg && !matchedPreset
+  );
+  const [selectedVialMg, setSelectedVialMg] = useState(
+    matchedPreset ? matchedPreset.value : 5
+  );
+  const [customVialMg, setCustomVialMg] = useState(initialVialMg || "5");
+  const [mixingVolumeMl, setMixingVolumeMl] = useState(
+    initialMixingVolumeMl || "2"
+  );
+  const [desiredAmountMcg, setDesiredAmountMcg] = useState(
+    initialSampleMcg || "250"
+  );
   const [selectedSyringeMl, setSelectedSyringeMl] = useState("1");
+  const [copied, setCopied] = useState(false);
+
+  const selectedPeptideName = initialPeptideName;
 
   const results = useMemo(() => {
     const vialMg = useCustomVial ? Number(customVialMg) : selectedVialMg;
@@ -73,6 +101,37 @@ export default function PeptideCalculator() {
     selectedSyringeMl,
   ]);
 
+  async function handleCopyResult() {
+    if (!results) return;
+
+    const lines = [];
+
+    if (selectedPeptideName) {
+      lines.push(
+        `Mix: ${selectedPeptideName}, ${results.vialMg} mg in ${results.mixingMl} mL`
+      );
+    } else {
+      lines.push(`Mix: ${results.vialMg} mg in ${results.mixingMl} mL`);
+    }
+
+    lines.push(`Dose: ${results.desiredMcg} mcg`);
+    lines.push(`Volume: ${results.requiredVolumeMl} mL`);
+    lines.push(`Syringe: ${results.requiredIU} IU`);
+
+    const text = lines.join("\n");
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_0.9fr]">
       <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
@@ -80,10 +139,17 @@ export default function PeptideCalculator() {
           Inputs
         </h2>
 
+        {selectedPeptideName ? (
+          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+            Calculator opened for:{" "}
+            <span className="font-semibold">{selectedPeptideName}</span>
+          </div>
+        ) : null}
+
         <div className="mt-6 grid gap-5">
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-              Peptide amount in vial
+              How much peptide is in the vial?
             </label>
 
             <div className="flex flex-wrap gap-2">
@@ -133,7 +199,7 @@ export default function PeptideCalculator() {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-              Mixing volume (mL)
+              How much water are you adding (mL)?
             </label>
             <input
               type="number"
@@ -147,7 +213,7 @@ export default function PeptideCalculator() {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-              Desired sample size (mcg)
+              How much peptide do you want in each dose (mcg)?
             </label>
             <input
               type="number"
@@ -206,10 +272,27 @@ export default function PeptideCalculator() {
               value={`${results.requiredIU} IU`}
             />
 
+            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  {results.desiredMcg} mcg = {results.requiredVolumeMl} mL (
+                  {results.requiredIU} IU)
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleCopyResult}
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
+                >
+                  {copied ? "Copied ✓" : "Copy"}
+                </button>
+              </div>
+            </div>
+
             {results.exceedsSyringe ? (
               <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-                Warning: the required volume exceeds the selected syringe capacity.
-                Choose a larger syringe or adjust the mix volume.
+                Warning: the required volume exceeds the selected syringe
+                capacity. Choose a larger syringe or adjust the mix volume.
               </div>
             ) : (
               <div className="rounded-2xl border border-green-300 bg-green-50 p-4 text-sm text-green-700">
