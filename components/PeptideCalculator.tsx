@@ -80,6 +80,7 @@ export default function PeptideCalculator({
     const requiredIU = requiredVolumeMl * 100;
     const syringeCapacityIU = syringeMl * 100;
     const exceedsSyringe = requiredVolumeMl > syringeMl;
+    const dosesPerVial = (vialMg * 1000) / desiredMcg;
 
     return {
       vialMg,
@@ -91,6 +92,8 @@ export default function PeptideCalculator({
       requiredIU: round(requiredIU, 1),
       syringeCapacityIU,
       exceedsSyringe,
+      dosesPerVial: round(dosesPerVial, 1),
+      selectedSyringeMl: syringeMl,
     };
   }, [
     useCustomVial,
@@ -115,8 +118,9 @@ export default function PeptideCalculator({
     }
 
     lines.push(`Dose: ${results.desiredMcg} mcg`);
-    lines.push(`Volume: ${results.requiredVolumeMl} mL`);
-    lines.push(`Syringe: ${results.requiredIU} IU`);
+    lines.push(`Volume to draw: ${results.requiredVolumeMl} mL`);
+    lines.push(`Syringe units: ${results.requiredIU} IU`);
+    lines.push(`Doses per vial: ${results.dosesPerVial}`);
 
     const text = lines.join("\n");
 
@@ -133,7 +137,7 @@ export default function PeptideCalculator({
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_0.9fr]">
+    <div className="grid gap-6 md:grid-cols-[1fr_0.95fr]">
       <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
         <h2 className="text-2xl font-semibold text-[var(--color-text)]">
           Inputs
@@ -255,37 +259,58 @@ export default function PeptideCalculator({
           </p>
         ) : (
           <div className="mt-6 grid gap-4">
-            <ResultCard
-              label="Concentration"
-              value={`${results.concentrationMcgPerMl} mcg/mL`}
-            />
-            <ResultCard
-              label="Per 0.01 mL"
-              value={`${results.concentrationMcgPer01Ml} mcg`}
-            />
-            <ResultCard
-              label="Required volume"
-              value={`${results.requiredVolumeMl} mL`}
-            />
-            <ResultCard
-              label="Syringe units"
-              value={`${results.requiredIU} IU`}
-            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ResultCard
+                label="Concentration"
+                value={`${results.concentrationMcgPerMl} mcg/mL`}
+              />
+              <ResultCard
+                label="Per 0.01 mL"
+                value={`${results.concentrationMcgPer01Ml} mcg`}
+              />
+              <ResultCard
+                label="Required volume"
+                value={`${results.requiredVolumeMl} mL`}
+              />
+              <ResultCard
+                label="Syringe units"
+                value={`${results.requiredIU} IU`}
+              />
+              <ResultCard
+                label="Doses per vial"
+                value={`${results.dosesPerVial}`}
+              />
+              <ResultCard
+                label="Selected syringe capacity"
+                value={`${results.syringeCapacityIU} IU`}
+              />
+            </div>
 
-            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm font-medium text-[var(--color-text)]">
-                  {results.desiredMcg} mcg = {results.requiredVolumeMl} mL (
-                  {results.requiredIU} IU)
-                </p>
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--color-text)]">
+                      Draw {results.requiredIU} IU ({results.requiredVolumeMl} mL)
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">
+                      Visual guide based on the syringe size you selected.
+                    </p>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={handleCopyResult}
-                  className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
-                >
-                  {copied ? "Copied ✓" : "Copy"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyResult}
+                    className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
+                  >
+                    {copied ? "Copied ✓" : "Copy"}
+                  </button>
+                </div>
+
+                <SyringeGraphic
+                  requiredIU={results.requiredIU}
+                  syringeCapacityIU={results.syringeCapacityIU}
+                />
               </div>
             </div>
 
@@ -299,6 +324,25 @@ export default function PeptideCalculator({
                 The required volume fits within the selected syringe size.
               </div>
             )}
+
+            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Quick summary
+              </p>
+              <div className="mt-3 space-y-1 text-sm text-[var(--color-muted)]">
+                <p>
+                  {results.vialMg} mg mixed with {results.mixingMl} mL creates a
+                  concentration of {results.concentrationMcgPerMl} mcg/mL.
+                </p>
+                <p>
+                  A {results.desiredMcg} mcg dose requires{" "}
+                  {results.requiredVolumeMl} mL, which equals {results.requiredIU} IU.
+                </p>
+                <p>
+                  This vial provides about {results.dosesPerVial} doses at that amount.
+                </p>
+              </div>
+            </div>
 
             <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
               <p>1 mg = 1000 mcg</p>
@@ -321,6 +365,221 @@ function ResultCard({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text)]">
         {value}
       </p>
+    </div>
+  );
+}
+
+function SyringeGraphic({
+  requiredIU,
+  syringeCapacityIU,
+}: {
+  requiredIU: number;
+  syringeCapacityIU: number;
+}) {
+  const safeCapacity = Math.max(syringeCapacityIU, 1);
+  const clampedIU = Math.max(0, Math.min(requiredIU, safeCapacity));
+  const fillPercent = clampedIU / safeCapacity;
+
+  // Visual layout numbers
+  const barrelLeft = 36;
+  const barrelTop = 18;
+  const barrelWidth = 360;
+  const barrelHeight = 44;
+  const barrelRight = barrelLeft + barrelWidth;
+
+  // Stopper position stays inside the barrel
+  const stopperWidth = 10;
+  const stopperLeft =
+    barrelLeft + fillPercent * barrelWidth - stopperWidth / 2;
+
+  // Tick setup
+  const majorTickCount = 10;
+  const minorTicksPerSection = 4;
+
+  return (
+    <div className="mt-4 flex w-full flex-col items-center">
+      <svg
+        width="460"
+        height="120"
+        viewBox="0 0 460 120"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full max-w-[460px]"
+        aria-label="Horizontal syringe visual"
+      >
+        <defs>
+          <linearGradient id="barrelBg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#eef2f7" />
+          </linearGradient>
+
+          <linearGradient id="liquidFill" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#bfdbfe" />
+            <stop offset="50%" stopColor="#60a5fa" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+
+          <linearGradient id="plasticFill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#e2e8f0" />
+            <stop offset="100%" stopColor="#94a3b8" />
+          </linearGradient>
+
+          <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.12" />
+          </filter>
+        </defs>
+
+        {/* Needle */}
+        <line
+          x1={barrelRight + 18}
+          y1={barrelTop + barrelHeight / 2}
+          x2={barrelRight + 46}
+          y2={barrelTop + barrelHeight / 2}
+          stroke="#94a3b8"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+
+        {/* Needle hub */}
+        <rect
+          x={barrelRight + 4}
+          y={barrelTop + 14}
+          width="16"
+          height="16"
+          rx="4"
+          fill="url(#plasticFill)"
+          stroke="#64748b"
+          strokeWidth="1"
+        />
+
+        {/* Plunger handle */}
+        <rect
+          x="4"
+          y={barrelTop + 10}
+          width="20"
+          height="24"
+          rx="6"
+          fill="url(#plasticFill)"
+          stroke="#64748b"
+          strokeWidth="1"
+        />
+
+        {/* Plunger rod */}
+        <rect
+          x="24"
+          y={barrelTop + 18}
+          width={barrelLeft - 24}
+          height="8"
+          rx="3"
+          fill="#94a3b8"
+        />
+
+        {/* Barrel */}
+        <rect
+          x={barrelLeft}
+          y={barrelTop}
+          width={barrelWidth}
+          height={barrelHeight}
+          rx="20"
+          fill="url(#barrelBg)"
+          stroke="#334155"
+          strokeWidth="1.5"
+          filter="url(#softShadow)"
+        />
+
+        {/* Liquid */}
+        <rect
+          x={barrelLeft + 2}
+          y={barrelTop + 2}
+          width={Math.max(fillPercent * barrelWidth - 2, 0)}
+          height={barrelHeight - 4}
+          rx="18"
+          fill="url(#liquidFill)"
+        />
+
+        {/* Liquid highlight */}
+        {fillPercent > 0 ? (
+          <rect
+            x={barrelLeft + 10}
+            y={barrelTop + 6}
+            width={Math.max(fillPercent * barrelWidth - 20, 0)}
+            height="6"
+            rx="3"
+            fill="#ffffff"
+            opacity="0.35"
+          />
+        ) : null}
+
+        {/* Stopper */}
+        <rect
+          x={Math.max(barrelLeft, Math.min(stopperLeft, barrelRight - stopperWidth))}
+          y={barrelTop + 3}
+          width={stopperWidth}
+          height={barrelHeight - 6}
+          rx="4"
+          fill="#111827"
+        />
+
+        {/* Major ticks and labels */}
+        {Array.from({ length: majorTickCount + 1 }).map((_, index) => {
+          const x = barrelLeft + (barrelWidth / majorTickCount) * index;
+          const labelValue = Math.round((safeCapacity / majorTickCount) * index);
+
+          return (
+            <g key={`major-${index}`}>
+              <line
+                x1={x}
+                y1={barrelTop - 2}
+                x2={x}
+                y2={barrelTop - 14}
+                stroke="#334155"
+                strokeWidth="1.5"
+              />
+              <text
+                x={x}
+                y={barrelTop + barrelHeight + 18}
+                fontSize="10"
+                textAnchor="middle"
+                fill="#475569"
+              >
+                {labelValue}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Minor ticks */}
+        {Array.from({ length: majorTickCount }).map((_, sectionIndex) => {
+          const sectionStart = barrelLeft + (barrelWidth / majorTickCount) * sectionIndex;
+          const sectionWidth = barrelWidth / majorTickCount;
+
+          return Array.from({ length: minorTicksPerSection }).map((_, minorIndex) => {
+            const x =
+              sectionStart +
+              (sectionWidth / (minorTicksPerSection + 1)) * (minorIndex + 1);
+
+            return (
+              <line
+                key={`minor-${sectionIndex}-${minorIndex}`}
+                x1={x}
+                y1={barrelTop - 2}
+                x2={x}
+                y2={barrelTop - 9}
+                stroke="#64748b"
+                strokeWidth="1"
+              />
+            );
+          });
+        })}
+      </svg>
+
+      <div className="mt-2 text-center">
+        <p className="text-sm font-medium text-[var(--color-text)]">
+          Draw to {clampedIU.toFixed(1)} IU
+        </p>
+        <p className="text-xs text-[var(--color-muted)]">
+          This visual is scaled to a {safeCapacity.toFixed(0)} IU syringe
+        </p>
+      </div>
     </div>
   );
 }

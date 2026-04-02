@@ -82,7 +82,7 @@ export default function LoginPage() {
             lowerMessage.includes("already") ||
             lowerMessage.includes("exists")
           ) {
-            setError("An account with this email already exists. Try logging in.");
+            setError("An account with this email may already exist. Try logging in.");
           } else {
             setError(error.message);
           }
@@ -92,7 +92,7 @@ export default function LoginPage() {
         }
 
         setMessage(
-          "Account created. Check your email if confirmation is required, then log in."
+          "If this email is new, your account has been created. If it already exists, try logging in instead. Check your email if confirmation is required."
         );
         setMode("login");
         setPassword("");
