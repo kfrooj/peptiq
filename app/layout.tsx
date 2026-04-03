@@ -44,6 +44,7 @@ export default async function RootLayout({
       .single();
 
     isAdmin = profile?.role === "admin";
+    <SiteHeader user={user} isAdmin={isAdmin} />
   }
 
   return (

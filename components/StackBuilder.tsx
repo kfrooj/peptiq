@@ -32,6 +32,10 @@ type Props = {
   favoritePeptideIds?: string[];
 };
 
+const LOCAL_STACK_ITEMS_KEY = "peptiq_stack";
+const LOCAL_STACK_NAME_KEY = "peptiq_stack_name";
+const LOCAL_STACK_ID_KEY = "peptiq_stack_id";
+
 export default function StackBuilder({
   peptides,
   initialStack = null,
@@ -51,6 +55,7 @@ export default function StackBuilder({
   const [saveMessage, setSaveMessage] = useState("");
   const [saveError, setSaveError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [hasLoadedLocalState, setHasLoadedLocalState] = useState(false);
 
   const favoritePeptideIdSet = useMemo(
     () => new Set(favoritePeptideIds),
@@ -64,10 +69,55 @@ export default function StackBuilder({
       setStackItems(initialStack.items || []);
       setSaveMessage("");
       setSaveError("");
-    } else {
-      setCurrentStackId(null);
+      setHasLoadedLocalState(true);
+      return;
     }
+
+    try {
+      const savedItemsRaw = localStorage.getItem(LOCAL_STACK_ITEMS_KEY);
+      const savedName = localStorage.getItem(LOCAL_STACK_NAME_KEY);
+      const savedStackId = localStorage.getItem(LOCAL_STACK_ID_KEY);
+
+      const savedItems = savedItemsRaw ? JSON.parse(savedItemsRaw) : null;
+
+      if (Array.isArray(savedItems)) {
+        setStackItems(savedItems);
+      }
+
+      if (savedName !== null) {
+        setStackName(savedName);
+      }
+
+      if (savedStackId) {
+        setCurrentStackId(savedStackId);
+      } else {
+        setCurrentStackId(null);
+      }
+    } catch {
+      localStorage.removeItem(LOCAL_STACK_ITEMS_KEY);
+      localStorage.removeItem(LOCAL_STACK_NAME_KEY);
+      localStorage.removeItem(LOCAL_STACK_ID_KEY);
+    }
+
+    setHasLoadedLocalState(true);
   }, [initialStack]);
+
+  useEffect(() => {
+    if (!hasLoadedLocalState) return;
+
+    try {
+      localStorage.setItem(LOCAL_STACK_ITEMS_KEY, JSON.stringify(stackItems));
+      localStorage.setItem(LOCAL_STACK_NAME_KEY, stackName);
+
+      if (currentStackId) {
+        localStorage.setItem(LOCAL_STACK_ID_KEY, currentStackId);
+      } else {
+        localStorage.removeItem(LOCAL_STACK_ID_KEY);
+      }
+    } catch {
+      // Ignore localStorage write errors
+    }
+  }, [stackItems, stackName, currentStackId, hasLoadedLocalState]);
 
   const filteredPeptides = useMemo(() => {
     const term = search.toLowerCase().trim();
@@ -131,6 +181,14 @@ export default function StackBuilder({
     setCurrentStackId(null);
     setSaveMessage("");
     setSaveError("");
+
+    try {
+      localStorage.removeItem(LOCAL_STACK_ITEMS_KEY);
+      localStorage.removeItem(LOCAL_STACK_NAME_KEY);
+      localStorage.removeItem(LOCAL_STACK_ID_KEY);
+    } catch {
+      // Ignore localStorage remove errors
+    }
   }
 
   async function copyStack() {
@@ -138,7 +196,7 @@ export default function StackBuilder({
 
     const lines: string[] = [];
 
-    lines.push(`Stack: ${stackName}`);
+    lines.push(`Stack: ${stackName || "Untitled Stack"}`);
     lines.push(`Total peptides: ${stackItems.length}`);
     lines.push("");
 

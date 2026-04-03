@@ -20,16 +20,17 @@ export default function SiteHeader({ user, isAdmin }: Props) {
       : "rounded-full px-4 py-2 text-sm font-medium text-gray-300 hover:text-white";
   }
 
-  const isHomeActive = pathname === "/";
-  const isCalculatorActive = pathname === "/calculator";
-  const isStacksActive = pathname.startsWith("/stacks");
-  const isDashboardActive = pathname.startsWith("/dashboard");
-  const isAdminActive = pathname === "/admin/login";
-  const isManagePeptidesActive = pathname.startsWith("/admin/peptides");
+  function getBg(isActive: boolean) {
+    return {
+      backgroundColor: isActive ? "var(--color-accent)" : "transparent",
+    };
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-800 bg-black">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        
+        {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
             src="/peptiq-logo.png"
@@ -40,95 +41,97 @@ export default function SiteHeader({ user, isAdmin }: Props) {
           />
         </Link>
 
+        {/* Navigation */}
         <nav className="flex items-center gap-2">
+
+          {/* Public */}
           <Link
             href="/"
-            className={getLinkClass(isHomeActive)}
-            style={{
-              backgroundColor: isHomeActive
-                ? "var(--color-accent)"
-                : "transparent",
-            }}
+            className={getLinkClass(pathname === "/")}
+            style={getBg(pathname === "/")}
           >
             Home
           </Link>
 
           <Link
             href="/calculator"
-            className={getLinkClass(isCalculatorActive)}
-            style={{
-              backgroundColor: isCalculatorActive
-                ? "var(--color-accent)"
-                : "transparent",
-            }}
+            className={getLinkClass(pathname === "/calculator")}
+            style={getBg(pathname === "/calculator")}
           >
             Calculator
           </Link>
 
           <Link
             href="/stacks"
-            className={getLinkClass(isStacksActive)}
-            style={{
-              backgroundColor: isStacksActive
-                ? "var(--color-accent)"
-                : "transparent",
-            }}
+            className={getLinkClass(pathname.startsWith("/stacks"))}
+            style={getBg(pathname.startsWith("/stacks"))}
           >
             Stacks
           </Link>
 
+          {/* Logged-in only */}
           {isLoggedIn && (
-            <Link
-              href="/dashboard"
-              className={getLinkClass(isDashboardActive)}
-              style={{
-                backgroundColor: isDashboardActive
-                  ? "var(--color-accent)"
-                  : "transparent",
-              }}
-            >
-              Dashboard
-            </Link>
-          )}
-
-          {isAdmin && (
             <>
               <Link
-                href="/admin/login"
-                className={getLinkClass(isAdminActive)}
-                style={{
-                  backgroundColor: isAdminActive
-                    ? "var(--color-accent)"
-                    : "transparent",
-                }}
+                href="/dashboard"
+                className={getLinkClass(pathname.startsWith("/dashboard"))}
+                style={getBg(pathname.startsWith("/dashboard"))}
               >
-                Admin
+                Dashboard
               </Link>
 
               <Link
+                href="/plans"
+                className={getLinkClass(pathname.startsWith("/plans"))}
+                style={getBg(pathname.startsWith("/plans"))}
+              >
+                Plans
+              </Link>
+
+              <Link
+                href="/log-injection"
+                className={getLinkClass(pathname.startsWith("/log-injection"))}
+                style={getBg(pathname.startsWith("/log-injection"))}
+              >
+                Log
+              </Link>
+
+              <Link
+                href="/wellness"
+                className={getLinkClass(pathname.startsWith("/wellness"))}
+                style={getBg(pathname.startsWith("/wellness"))}
+              >
+                Wellness
+              </Link>
+            </>
+          )}
+
+          {/* Admin only */}
+          {isAdmin && (
+            <>
+              <Link
                 href="/admin/peptides"
-                className={getLinkClass(isManagePeptidesActive)}
-                style={{
-                  backgroundColor: isManagePeptidesActive
-                    ? "var(--color-accent)"
-                    : "transparent",
-                }}
+                className={getLinkClass(pathname.startsWith("/admin/peptides"))}
+                style={getBg(pathname.startsWith("/admin/peptides"))}
               >
                 Manage
               </Link>
             </>
           )}
 
-          {isLoggedIn ? (
-            <LogoutButton />
-          ) : (
-            <Link
-              href="/login"
-              className="rounded-full px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
-            >
-              Login
-            </Link>
-          )}
+          {/* Auth button */}
+          <div className="ml-2">
+            {isLoggedIn ? (
+              <LogoutButton />
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-full px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
+              >
+                Login
+              </Link>
+            )}
+          </div>
         </nav>
       </div>
     </header>

@@ -48,19 +48,24 @@ export default async function StacksPage({
     throw new Error(peptidesError.message);
   }
 
-  const { data: savedStacks, error: stacksError } = await supabase
-    .from("stacks")
-    .select("id, name, created_at, stack_items(id)")
-    .order("created_at", { ascending: false });
-
-  if (stacksError) {
-    throw new Error(stacksError.message);
-  }
-
+  let savedStacks: SavedStack[] = [];
   let favoriteStackIds = new Set<string>();
   let favoritePeptideIds = new Set<string>();
+  let loadedStack: LoadedStack = null;
 
   if (user) {
+    const { data: savedStacksData, error: stacksError } = await supabase
+      .from("stacks")
+      .select("id, name, created_at, stack_items(id)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (stacksError) {
+      throw new Error(stacksError.message);
+    }
+
+    savedStacks = savedStacksData ?? [];
+
     const { data: favoriteStacks, error: favoriteStacksError } = await supabase
       .from("favorite_stacks")
       .select("stack_id")
@@ -87,49 +92,48 @@ export default async function StacksPage({
     favoritePeptideIds = new Set(
       (favoritePeptides ?? []).map((item) => item.peptide_id)
     );
-  }
 
-  let loadedStack: LoadedStack = null;
-
-  if (stackId) {
-    const { data: selectedStack, error: selectedStackError } = await supabase
-      .from("stacks")
-      .select(
-        `
-          id,
-          name,
-          stack_items (
+    if (stackId) {
+      const { data: selectedStack, error: selectedStackError } = await supabase
+        .from("stacks")
+        .select(
+          `
             id,
-            note,
-            position,
-            peptide:peptides (
+            name,
+            stack_items (
               id,
-              name,
-              category,
-              benefits
+              note,
+              position,
+              peptide:peptides (
+                id,
+                name,
+                category,
+                benefits
+              )
             )
-          )
-        `
-      )
-      .eq("id", stackId)
-      .single();
+          `
+        )
+        .eq("id", stackId)
+        .eq("user_id", user.id)
+        .single();
 
-    if (!selectedStackError && selectedStack) {
-      const items = (selectedStack.stack_items ?? [])
-        .sort((a: any, b: any) => a.position - b.position)
-        .map((item: any) => ({
-          id: item.peptide.id,
-          name: item.peptide.name,
-          category: item.peptide.category,
-          benefits: item.peptide.benefits,
-          note: item.note ?? "",
-        }));
+      if (!selectedStackError && selectedStack) {
+        const items = (selectedStack.stack_items ?? [])
+          .sort((a: any, b: any) => a.position - b.position)
+          .map((item: any) => ({
+            id: item.peptide.id,
+            name: item.peptide.name,
+            category: item.peptide.category,
+            benefits: item.peptide.benefits,
+            note: item.note ?? "",
+          }));
 
-      loadedStack = {
-        id: selectedStack.id,
-        name: selectedStack.name,
-        items,
-      };
+        loadedStack = {
+          id: selectedStack.id,
+          name: selectedStack.name,
+          items,
+        };
+      }
     }
   }
 
@@ -151,73 +155,94 @@ export default async function StacksPage({
         favoritePeptideIds={[...favoritePeptideIds]}
       />
 
-      <section className="mt-8 rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-        <h2 className="text-2xl font-semibold text-[var(--color-text)]">
-          Saved Stacks
-        </h2>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Previously saved stacks from your database.
-        </p>
+      {user ? (
+        <section className="mt-8 rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-[var(--color-text)]">
+            Saved Stacks
+          </h2>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">
+            Previously saved stacks from your database.
+          </p>
 
-        <div className="mt-6 grid gap-4">
-          {!savedStacks?.length ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
-              No saved stacks yet.
-            </div>
-          ) : (
-            savedStacks.map((stack: SavedStack) => {
-              const itemCount = stack.stack_items?.length ?? 0;
-              const createdAt = stack.created_at
-                ? new Date(stack.created_at).toLocaleString()
-                : "Unknown date";
+          <div className="mt-6 grid gap-4">
+            {!savedStacks.length ? (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
+                No saved stacks yet.
+              </div>
+            ) : (
+              savedStacks.map((stack: SavedStack) => {
+                const itemCount = stack.stack_items?.length ?? 0;
+                const createdAt = stack.created_at
+                  ? new Date(stack.created_at).toLocaleString()
+                  : "Unknown date";
 
-              return (
-                <div
-                  key={stack.id}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                        {stack.name}
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        {itemCount} peptide{itemCount === 1 ? "" : "s"}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Saved: {createdAt}
-                      </p>
-                    </div>
+                return (
+                  <div
+                    key={stack.id}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                          {stack.name}
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          {itemCount} peptide{itemCount === 1 ? "" : "s"}
+                        </p>
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          Saved: {createdAt}
+                        </p>
+                      </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <StackFavoriteButton
-                        stackId={stack.id}
-                        initialIsFavorite={favoriteStackIds.has(stack.id)}
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        <StackFavoriteButton
+                          stackId={stack.id}
+                          initialIsFavorite={favoriteStackIds.has(stack.id)}
+                        />
 
-                      <Link
-                        href={`/stacks?stackId=${stack.id}`}
-                        className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
-                      >
-                        Load
-                      </Link>
+                        <Link
+                          href={`/stacks?stackId=${stack.id}`}
+                          className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                        >
+                          Load
+                        </Link>
 
-                      <form
-                        action={async () => {
-                          "use server";
-                          await deleteStack(stack.id);
-                        }}
-                      >
-                        <DeleteStackButton stackName={stack.name} />
-                      </form>
+                        <form
+                          action={async () => {
+                            "use server";
+                            await deleteStack(stack.id);
+                          }}
+                        >
+                          <DeleteStackButton stackName={stack.name} />
+                        </form>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </section>
+                );
+              })
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="mt-8 rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-[var(--color-text)]">
+            Save Your Stacks
+          </h2>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">
+            Log in to save stacks, favorite peptides, and track your wellness
+            routine.
+          </p>
+
+          <div className="mt-4">
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+            >
+              Log in
+            </Link>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
