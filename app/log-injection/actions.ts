@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { resolveReminderForLog } from "@/lib/reminders/resolveReminderForLog";
 
 type CreateInjectionLogInput = {
   peptideId: string;
@@ -55,8 +56,21 @@ export async function createInjectionLog(input: CreateInjectionLogInput) {
     return { success: false, error: error.message };
   }
 
+  try {
+    const result = await resolveReminderForLog(supabase, {
+      userId: user.id,
+      planId: input.planId || null,
+      injectionAt: input.injectionAt,
+    });
+
+    console.log("REMINDER RESOLUTION RESULT:", result);
+  } catch (resolveError) {
+    console.error("REMINDER RESOLUTION ERROR:", resolveError);
+  }
+
   revalidatePath("/log-injection");
   revalidatePath("/dashboard");
+  revalidatePath("/wellness");
 
   return { success: true };
 }
@@ -88,6 +102,7 @@ export async function deleteInjectionLog(logId: string) {
 
   revalidatePath("/log-injection");
   revalidatePath("/dashboard");
+  revalidatePath("/wellness");
 
   return { success: true };
 }

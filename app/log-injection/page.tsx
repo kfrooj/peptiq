@@ -64,7 +64,19 @@ function normalizeActivePlans(rawPlans: any[]): ActivePlan[] {
   }));
 }
 
-export default async function LogInjectionPage() {
+function toDateTimeLocalValue(value: string) {
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+export default async function LogInjectionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ planId?: string; injectionAt?: string }>;
+}) {
+  const { planId = "", injectionAt = "" } = await searchParams;
+
   const supabase = await createClient();
 
   const {
@@ -128,6 +140,9 @@ export default async function LogInjectionPage() {
   const plans = normalizeActivePlans(rawPlans ?? []);
   const logs = normalizeInjectionLogs(rawLogs ?? []);
 
+  const initialPlanId = plans.some((plan) => plan.id === planId) ? planId : "";
+  const initialInjectionAt = injectionAt ? toDateTimeLocalValue(injectionAt) : "";
+
   return (
     <main className="mx-auto max-w-6xl p-6">
       <div className="mb-8">
@@ -149,6 +164,8 @@ export default async function LogInjectionPage() {
             <NewInjectionLogForm
               peptides={peptides ?? []}
               plans={plans}
+              initialPlanId={initialPlanId}
+              initialInjectionAt={initialInjectionAt}
             />
           </div>
         </section>

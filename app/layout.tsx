@@ -44,7 +44,6 @@ export default async function RootLayout({
       .single();
 
     isAdmin = profile?.role === "admin";
-    <SiteHeader user={user} isAdmin={isAdmin} />
   }
 
   return (
@@ -52,9 +51,9 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-[var(--color-background)]">
         <SiteHeader user={user} isAdmin={isAdmin} />
-        {children}
+        <div className="flex-1">{children}</div>
       </body>
     </html>
   );

@@ -22,7 +22,10 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
   const [frequencyValue, setFrequencyValue] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [defaultTime, setDefaultTime] = useState("");
+  const [defaultTime, setDefaultTime] = useState("09:00");
+  const [active, setActive] = useState(true);
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reminderOffsetHours, setReminderOffsetHours] = useState("24");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -37,7 +40,10 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
     setFrequencyValue("");
     setStartDate("");
     setEndDate("");
-    setDefaultTime("");
+    setDefaultTime("09:00");
+    setActive(true);
+    setRemindersEnabled(true);
+    setReminderOffsetHours("24");
     setNotes("");
   }
 
@@ -45,10 +51,48 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
     setMessage("");
     setError("");
 
+    if (!peptideId) {
+      setError("Please select a peptide.");
+      return;
+    }
+
+    if (!planName.trim()) {
+      setError("Please enter a plan name.");
+      return;
+    }
+
+    if (!doseAmount || Number(doseAmount) <= 0) {
+      setError("Please enter a valid dose amount.");
+      return;
+    }
+
+    if (!startDate) {
+      setError("Please choose a start date.");
+      return;
+    }
+
+    if (!defaultTime) {
+      setError("Please choose a default reminder time.");
+      return;
+    }
+
+    if (
+      frequencyType === "every_x_days" &&
+      (!frequencyValue || Number(frequencyValue) < 1)
+    ) {
+      setError("Please enter how many days for the frequency.");
+      return;
+    }
+
+    if (!reminderOffsetHours || Number(reminderOffsetHours) < 1) {
+      setError("Please enter a valid reminder offset.");
+      return;
+    }
+
     startTransition(async () => {
       const result = await createInjectionPlan({
         peptideId,
-        planName,
+        planName: planName.trim(),
         doseAmount: Number(doseAmount),
         doseUnit,
         frequencyType,
@@ -58,7 +102,10 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
             : null,
         startDate,
         endDate: endDate || null,
-        defaultTime: defaultTime || null,
+        defaultTime,
+        active,
+        remindersEnabled,
+        reminderOffsetHours: Number(reminderOffsetHours),
         notes: notes || null,
       });
 
@@ -148,7 +195,6 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
             className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
           >
             <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
             <option value="every_x_days">Every X Days</option>
           </select>
         </div>
@@ -199,7 +245,7 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
 
       <div>
         <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Default reminder time
+          Injection time
         </label>
         <input
           type="time"
@@ -207,6 +253,54 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
           onChange={(e) => setDefaultTime(e.target.value)}
           className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
         />
+        <p className="mt-2 text-xs text-[var(--color-muted)]">
+          This is the planned injection time used to calculate reminder timing.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-[var(--color-border)] p-4">
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">
+          Reminder Settings
+        </h3>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+            />
+            Plan is active
+          </label>
+
+          <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
+            <input
+              type="checkbox"
+              checked={remindersEnabled}
+              onChange={(e) => setRemindersEnabled(e.target.checked)}
+            />
+            Enable reminders
+          </label>
+        </div>
+
+        {remindersEnabled ? (
+          <div className="mt-4">
+            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+              Remind me how many hours before?
+            </label>
+            <select
+              value={reminderOffsetHours}
+              onChange={(e) => setReminderOffsetHours(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+            >
+              <option value="1">1 hour</option>
+              <option value="6">6 hours</option>
+              <option value="12">12 hours</option>
+              <option value="24">24 hours</option>
+              <option value="48">48 hours</option>
+            </select>
+          </div>
+        ) : null}
       </div>
 
       <div>

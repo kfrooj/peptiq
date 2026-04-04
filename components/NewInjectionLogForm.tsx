@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { createInjectionLog } from "@/app/log-injection/actions";
 
 type Peptide = {
@@ -19,32 +19,19 @@ type Plan = {
 type Props = {
   peptides: Peptide[];
   plans: Plan[];
+  initialPlanId?: string;
+  initialInjectionAt?: string;
 };
 
-const injectionSites = [
-  "Abdomen",
-  "Left abdomen",
-  "Right abdomen",
-  "Left thigh",
-  "Right thigh",
-  "Left glute",
-  "Right glute",
-  "Left arm",
-  "Right arm",
-  "Other",
-];
-
-function getCurrentDateTimeLocal() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60 * 1000);
-  return local.toISOString().slice(0, 16);
-}
-
-export default function NewInjectionLogForm({ peptides, plans }: Props) {
+export default function NewInjectionLogForm({
+  peptides,
+  plans,
+  initialPlanId = "",
+  initialInjectionAt = "",
+}: Props) {
   const [peptideId, setPeptideId] = useState("");
-  const [planId, setPlanId] = useState("");
-  const [injectionAt, setInjectionAt] = useState(getCurrentDateTimeLocal());
+  const [planId, setPlanId] = useState(initialPlanId);
+  const [injectionAt, setInjectionAt] = useState(initialInjectionAt);
   const [doseAmount, setDoseAmount] = useState("");
   const [doseUnit, setDoseUnit] = useState("mcg");
   const [site, setSite] = useState("");
@@ -53,45 +40,33 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const filteredPlans = useMemo(() => {
-    if (!peptideId) return plans;
-    return plans.filter((plan) => plan.peptide_id === peptideId);
-  }, [peptideId, plans]);
+  useEffect(() => {
+    setPlanId(initialPlanId);
+  }, [initialPlanId]);
+
+  useEffect(() => {
+    setInjectionAt(initialInjectionAt);
+  }, [initialInjectionAt]);
+
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => plan.id === planId) ?? null,
+    [plans, planId]
+  );
+
+  useEffect(() => {
+    if (selectedPlan) {
+      setPeptideId(selectedPlan.peptide_id);
+    }
+  }, [selectedPlan]);
 
   function resetForm() {
-    setPeptideId("");
-    setPlanId("");
-    setInjectionAt(getCurrentDateTimeLocal());
+    setPeptideId(selectedPlan?.peptide_id ?? "");
+    setPlanId(initialPlanId);
+    setInjectionAt(initialInjectionAt);
     setDoseAmount("");
     setDoseUnit("mcg");
     setSite("");
     setNotes("");
-  }
-
-  function handlePeptideChange(nextPeptideId: string) {
-    setPeptideId(nextPeptideId);
-
-    if (planId) {
-      const stillValid = plans.some(
-        (plan) => plan.id === planId && plan.peptide_id === nextPeptideId
-      );
-
-      if (!stillValid) {
-        setPlanId("");
-      }
-    }
-  }
-
-  function handlePlanChange(nextPlanId: string) {
-    setPlanId(nextPlanId);
-
-    if (!nextPlanId) return;
-
-    const selectedPlan = plans.find((plan) => plan.id === nextPlanId);
-
-    if (selectedPlan) {
-      setPeptideId(selectedPlan.peptide_id);
-    }
   }
 
   function handleSubmit() {
@@ -102,7 +77,7 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
       const result = await createInjectionLog({
         peptideId,
         planId: planId || null,
-        injectionAt: new Date(injectionAt).toISOString(),
+        injectionAt,
         doseAmount: Number(doseAmount),
         doseUnit,
         site,
@@ -122,17 +97,17 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
     <div className="grid gap-4">
       <div>
         <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Peptide
+          Plan
         </label>
         <select
-          value={peptideId}
-          onChange={(e) => handlePeptideChange(e.target.value)}
+          value={planId}
+          onChange={(e) => setPlanId(e.target.value)}
           className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
         >
-          <option value="">Select a peptide</option>
-          {peptides.map((peptide) => (
-            <option key={peptide.id} value={peptide.id}>
-              {peptide.name}
+          <option value="">No linked plan</option>
+          {plans.map((plan) => (
+            <option key={plan.id} value={plan.id}>
+              {plan.plan_name}
             </option>
           ))}
         </select>
@@ -140,17 +115,17 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
 
       <div>
         <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Link to plan (optional)
+          Peptide
         </label>
         <select
-          value={planId}
-          onChange={(e) => handlePlanChange(e.target.value)}
+          value={peptideId}
+          onChange={(e) => setPeptideId(e.target.value)}
           className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
         >
-          <option value="">No linked plan</option>
-          {filteredPlans.map((plan) => (
-            <option key={plan.id} value={plan.id}>
-              {plan.plan_name}
+          <option value="">Select a peptide</option>
+          {peptides.map((peptide) => (
+            <option key={peptide.id} value={peptide.id}>
+              {peptide.name}
             </option>
           ))}
         </select>
@@ -179,7 +154,6 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
             step="0.01"
             value={doseAmount}
             onChange={(e) => setDoseAmount(e.target.value)}
-            placeholder="Example: 250"
             className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
           />
         </div>
@@ -205,18 +179,13 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
         <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
           Injection site
         </label>
-        <select
+        <input
+          type="text"
           value={site}
           onChange={(e) => setSite(e.target.value)}
+          placeholder="Example: Left abdomen"
           className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-        >
-          <option value="">Select injection site</option>
-          {injectionSites.map((siteOption) => (
-            <option key={siteOption} value={siteOption}>
-              {siteOption}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       <div>
@@ -227,7 +196,7 @@ export default function NewInjectionLogForm({ peptides, plans }: Props) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={4}
-          placeholder="Example: mild redness, rotated from previous right abdomen site"
+          placeholder="Optional notes"
           className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
         />
       </div>

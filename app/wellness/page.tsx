@@ -4,6 +4,13 @@ import WellnessFilters from "@/components/WellnessFilters";
 import InjectionActivityChart from "@/components/InjectionActivityChart";
 import SiteUsageBodyAreaChart from "@/components/SiteUsageBodyAreaChart";
 import PeptideTimelineChart from "@/components/PeptideTimelineChart";
+import MissedPlanReminderActions from "@/components/MissedPlanReminderActions";
+
+type PeptideRelation = {
+  id: string;
+  name: string;
+  category: string | null;
+};
 
 type InjectionLog = {
   id: string;
@@ -13,11 +20,7 @@ type InjectionLog = {
   site: string;
   notes: string | null;
   plan_id: string | null;
-  peptide: {
-    id: string;
-    name: string;
-    category: string | null;
-  } | null;
+  peptide: PeptideRelation | null;
 };
 
 type InjectionPlan = {
@@ -29,18 +32,16 @@ type InjectionPlan = {
   end_date: string | null;
   default_time: string | null;
   active: boolean;
-  peptide: {
-    id: string;
-    name: string;
-    category: string | null;
-  } | null;
+  peptide: PeptideRelation | null;
 };
 
 type MissedPlanReminder = {
+  reminderId: string;
   planId: string;
   planName: string;
   peptideName: string;
   dueAt: Date;
+  status: string | null;
 };
 
 function formatDate(value: string | Date) {
@@ -68,64 +69,11 @@ function startOfLocalDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
 function daysBetween(start: Date, end: Date) {
   const msPerDay = 1000 * 60 * 60 * 24;
   const startDay = startOfLocalDay(start).getTime();
   const endDay = startOfLocalDay(end).getTime();
   return Math.floor((endDay - startDay) / msPerDay);
-}
-
-function parsePlanDateTime(dateString: string, timeString?: string | null) {
-  const safeTime = timeString && timeString.trim() ? timeString : "12:00";
-  return new Date(`${dateString}T${safeTime}:00`);
-}
-
-function getPlanIntervalDays(plan: InjectionPlan) {
-  if (plan.frequency_type === "weekly") return 7;
-  if (plan.frequency_type === "every_x_days") {
-    return Math.max(plan.frequency_value ?? 1, 1);
-  }
-  return 1;
-}
-
-function getMostRecentDueDate(plan: InjectionPlan, now: Date) {
-  if (!plan.active) return null;
-
-  const startDateTime = parsePlanDateTime(plan.start_date, plan.default_time);
-  const endDateTime = plan.end_date
-    ? parsePlanDateTime(plan.end_date, plan.default_time)
-    : null;
-
-  if (startDateTime > now) return null;
-  if (endDateTime && endDateTime < startDateTime) return null;
-
-  const intervalDays = getPlanIntervalDays(plan);
-  const dayDiff = daysBetween(startDateTime, now);
-
-  if (dayDiff < 0) return null;
-
-  const stepCount = Math.floor(dayDiff / intervalDays);
-  let dueDate = addDays(startDateTime, stepCount * intervalDays);
-
-  if (dueDate > now) {
-    dueDate = addDays(dueDate, -intervalDays);
-  }
-
-  if (dueDate < startDateTime) return null;
-  if (endDateTime && dueDate > endDateTime) return null;
-
-  return dueDate;
-}
-
-function getNextDueDate(plan: InjectionPlan, dueDate: Date) {
-  const intervalDays = getPlanIntervalDays(plan);
-  return addDays(dueDate, intervalDays);
 }
 
 function getDaysSinceLastInjection(logs: InjectionLog[]) {
@@ -166,43 +114,6 @@ function getCurrentLoggingStreak(logs: InjectionLog[]) {
   }
 
   return streak;
-}
-
-function getMissedPlanReminders(
-  plans: InjectionPlan[],
-  logs: InjectionLog[],
-  now: Date
-) {
-  const reminders: MissedPlanReminder[] = [];
-
-  for (const plan of plans) {
-    if (!plan.active) continue;
-
-    const dueDate = getMostRecentDueDate(plan, now);
-    if (!dueDate) continue;
-
-    if (dueDate > now) continue;
-
-    const nextDueDate = getNextDueDate(plan, dueDate);
-
-    const hasLogForWindow = logs.some((log) => {
-      if (log.plan_id !== plan.id) return false;
-
-      const loggedAt = new Date(log.injection_at);
-      return loggedAt >= dueDate && loggedAt < nextDueDate;
-    });
-
-    if (!hasLogForWindow) {
-      reminders.push({
-        planId: plan.id,
-        planName: plan.plan_name,
-        peptideName: plan.peptide?.name || "Unknown peptide",
-        dueAt: dueDate,
-      });
-    }
-  }
-
-  return reminders.sort((a, b) => b.dueAt.getTime() - a.dueAt.getTime());
 }
 
 function getLast7Days() {
@@ -410,6 +321,37 @@ export default async function WellnessPage({
     throw new Error(plansError.message);
   }
 
+  const { data: rawMissedReminders, error: missedRemindersError } =
+    await supabase
+      .from("plan_reminders")
+      .select(
+        `
+          id,
+          plan_id,
+          reminder_for,
+          status,
+          is_completed,
+          plan:injection_plans (
+            id,
+            plan_name,
+            peptide:peptides (
+              id,
+              name,
+              category
+            )
+          )
+        `
+      )
+      .eq("user_id", user.id)
+      .eq("is_completed", false)
+      .in("status", ["pending", "sent"])
+      .lt("reminder_for", new Date().toISOString())
+      .order("reminder_for", { ascending: false });
+
+  if (missedRemindersError) {
+    throw new Error(missedRemindersError.message);
+  }
+
   const typedLogs: InjectionLog[] = (logs ?? []).map((log: any) => ({
     id: log.id,
     injection_at: log.injection_at,
@@ -418,7 +360,7 @@ export default async function WellnessPage({
     site: log.site,
     notes: log.notes,
     plan_id: log.plan_id ?? null,
-    peptide: normalizeSingleRelation(log.peptide),
+    peptide: normalizeSingleRelation<PeptideRelation>(log.peptide),
   }));
 
   const typedPlans: InjectionPlan[] = (rawPlans ?? []).map((plan: any) => ({
@@ -430,8 +372,24 @@ export default async function WellnessPage({
     end_date: plan.end_date ?? null,
     default_time: plan.default_time ?? null,
     active: Boolean(plan.active),
-    peptide: normalizeSingleRelation(plan.peptide),
+    peptide: normalizeSingleRelation<PeptideRelation>(plan.peptide),
   }));
+
+  const missedPlanReminders: MissedPlanReminder[] = (
+    rawMissedReminders ?? []
+  ).map((reminder: any) => {
+    const relatedPlan = normalizeSingleRelation<any>(reminder.plan);
+    const relatedPeptide = normalizeSingleRelation<any>(relatedPlan?.peptide);
+
+    return {
+      reminderId: reminder.id,
+      planId: reminder.plan_id,
+      planName: relatedPlan?.plan_name || "Unknown plan",
+      peptideName: relatedPeptide?.name || "Unknown peptide",
+      dueAt: new Date(reminder.reminder_for),
+      status: reminder.status ?? null,
+    };
+  });
 
   const totalInjections = typedLogs.length;
   const activePlans = typedPlans.filter((plan) => plan.active).length;
@@ -474,11 +432,6 @@ export default async function WellnessPage({
 
   const daysSinceLastInjection = getDaysSinceLastInjection(typedLogs);
   const currentLoggingStreak = getCurrentLoggingStreak(typedLogs);
-  const missedPlanReminders = getMissedPlanReminders(
-    typedPlans,
-    typedLogs,
-    new Date()
-  );
 
   return (
     <main className="mx-auto max-w-6xl p-6">
@@ -487,7 +440,8 @@ export default async function WellnessPage({
           Wellness Tracker
         </h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Review your injection history, patterns, adherence signals, and recent wellness notes.
+          Review your injection history, patterns, adherence signals, and recent
+          wellness notes.
         </p>
       </div>
 
@@ -555,7 +509,8 @@ export default async function WellnessPage({
           Missed-Plan Reminders
         </h2>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          These reminders are based on active plans and linked injection logs.
+          These reminders are based on planned injection times that have passed
+          and have not yet been resolved.
         </p>
 
         <div className="mt-4 grid gap-4">
@@ -566,21 +521,30 @@ export default async function WellnessPage({
           ) : (
             missedPlanReminders.map((reminder) => (
               <div
-                key={`${reminder.planId}-${reminder.dueAt.toISOString()}`}
+                key={reminder.reminderId}
                 className="rounded-2xl border border-amber-300 bg-amber-50 p-4"
               >
-                <p className="text-sm font-semibold text-amber-800">
-                  {reminder.planName}
-                </p>
-                <p className="mt-1 text-sm text-amber-700">
-                  Peptide: {reminder.peptideName}
-                </p>
-                <p className="mt-1 text-sm text-amber-700">
-                  Expected log due: {formatDate(reminder.dueAt)}
-                </p>
-                <p className="mt-2 text-sm text-amber-700">
-                  You have not logged this planned injection yet.
-                </p>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">
+                      {reminder.planName}
+                    </p>
+                    <p className="mt-1 text-sm text-amber-700">
+                      Peptide: {reminder.peptideName}
+                    </p>
+                    <p className="mt-1 text-sm text-amber-700">
+                      Expected log due: {formatDate(reminder.dueAt)}
+                    </p>
+                    <p className="mt-1 text-xs uppercase tracking-wide text-amber-600">
+                      Status: {reminder.status || "unknown"}
+                    </p>
+                    <p className="mt-2 text-sm text-amber-700">
+                      You have not logged this planned injection yet.
+                    </p>
+                  </div>
+
+                  <MissedPlanReminderActions reminderId={reminder.reminderId} />
+                </div>
               </div>
             ))
           )}
@@ -627,10 +591,10 @@ export default async function WellnessPage({
               title="Adherence signal"
               content={
                 missedPlanReminders.length > 0
-                  ? `You currently have ${missedPlanReminders.length} missed planned injection reminder${
+                  ? `You currently have ${missedPlanReminders.length} unresolved planned injection reminder${
                       missedPlanReminders.length === 1 ? "" : "s"
                     }.`
-                  : "No missed planned injections detected right now."
+                  : "No unresolved planned injections detected right now."
               }
             />
           </div>

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import NewInjectionPlanForm from "@/components/NewInjectionPlanForm";
 import InjectionPlanActions from "@/components/InjectionPlanActions";
+import PlanAdherenceSparkline from "@/components/PlanAdherenceSparkline";
 
 type PeptideRelation = {
   id: string;
@@ -20,9 +21,34 @@ type InjectionPlan = {
   end_date: string | null;
   default_time: string | null;
   active: boolean;
+  reminders_enabled: boolean;
+  reminder_offset_hours: number | null;
   notes: string | null;
   created_at: string;
   peptide: PeptideRelation | null;
+};
+
+type ReminderRow = {
+  id: string;
+  plan_id: string | null;
+  is_completed: boolean;
+  reminder_for: string;
+};
+
+type TrendPoint = {
+  key: string;
+  label: string;
+  fullLabel: string;
+  total: number;
+  completed: number;
+  adherence: number;
+};
+
+type ReminderDetail = {
+  id: string;
+  fullLabel: string;
+  timeLabel: string;
+  completed: boolean;
 };
 
 function normalizeSingleRelation<T>(
@@ -47,10 +73,107 @@ function normalizeInjectionPlans(rawPlans: any[]): InjectionPlan[] {
     end_date: plan.end_date ?? null,
     default_time: plan.default_time ?? null,
     active: Boolean(plan.active),
+    reminders_enabled: Boolean(plan.reminders_enabled),
+    reminder_offset_hours: plan.reminder_offset_hours ?? null,
     notes: plan.notes ?? null,
     created_at: plan.created_at,
     peptide: normalizeSingleRelation<PeptideRelation>(plan.peptide),
   }));
+}
+
+function getAdherenceStyles(adherence: number) {
+  if (adherence >= 80) {
+    return {
+      text: "text-green-700",
+      bg: "bg-green-50",
+      border: "border-green-200",
+      line: "#16a34a",
+    };
+  }
+
+  if (adherence >= 50) {
+    return {
+      text: "text-amber-700",
+      bg: "bg-amber-50",
+      border: "border-amber-200",
+      line: "#d97706",
+    };
+  }
+
+  return {
+    text: "text-red-700",
+    bg: "bg-red-50",
+    border: "border-red-200",
+    line: "#dc2626",
+  };
+}
+
+function formatLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getLast30Days() {
+  const shortFormatter = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+
+  const fullFormatter = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  const today = new Date();
+  const days: { key: string; label: string; fullLabel: string }[] = [];
+
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(today.getDate() - i);
+
+    days.push({
+      key: formatLocalDateKey(date),
+      label: shortFormatter.format(date),
+      fullLabel: fullFormatter.format(date),
+    });
+  }
+
+  return days;
+}
+
+function getTrendSummary(points: TrendPoint[]) {
+  const daysWithData = points.filter((point) => point.total > 0);
+
+  if (daysWithData.length < 2) {
+    return "Not enough data yet";
+  }
+
+  const recent = daysWithData.slice(-7);
+  const earlier = daysWithData.slice(-14, -7);
+
+  if (!recent.length || !earlier.length) {
+    return "Building trend";
+  }
+
+  const recentAvg =
+    recent.reduce((sum, point) => sum + point.adherence, 0) / recent.length;
+  const earlierAvg =
+    earlier.reduce((sum, point) => sum + point.adherence, 0) / earlier.length;
+
+  if (recentAvg >= earlierAvg + 10) return "Improving";
+  if (recentAvg <= earlierAvg - 10) return "Needs attention";
+  return "Stable";
+}
+
+function formatTimeLabel(value: string) {
+  return new Date(value).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export default async function PlansPage() {
@@ -88,6 +211,8 @@ export default async function PlansPage() {
         end_date,
         default_time,
         active,
+        reminders_enabled,
+        reminder_offset_hours,
         notes,
         created_at,
         peptide:peptides (
@@ -102,6 +227,106 @@ export default async function PlansPage() {
 
   if (plansError) {
     throw new Error(plansError.message);
+  }
+
+  const { data: adherenceData, error: adherenceError } = await supabase
+    .from("plan_reminders")
+    .select("id, plan_id, is_completed, reminder_for")
+    .eq("user_id", user.id);
+
+  if (adherenceError) {
+    throw new Error(adherenceError.message);
+  }
+
+  const reminderRows: ReminderRow[] = (adherenceData ?? []).map((row: any) => ({
+    id: row.id,
+    plan_id: row.plan_id ?? null,
+    is_completed: Boolean(row.is_completed),
+    reminder_for: row.reminder_for,
+  }));
+
+  const adherenceMap: Record<
+    string,
+    { total: number; completed: number; missed: number }
+  > = {};
+
+  for (const reminder of reminderRows) {
+    const planId = reminder.plan_id;
+    if (!planId) continue;
+
+    if (!adherenceMap[planId]) {
+      adherenceMap[planId] = {
+        total: 0,
+        completed: 0,
+        missed: 0,
+      };
+    }
+
+    adherenceMap[planId].total += 1;
+
+    if (reminder.is_completed) {
+      adherenceMap[planId].completed += 1;
+    } else if (new Date(reminder.reminder_for) < new Date()) {
+      adherenceMap[planId].missed += 1;
+    }
+  }
+
+  const last30Days = getLast30Days();
+
+  const trendMap: Record<string, TrendPoint[]> = {};
+  const reminderDetailsMap: Record<string, Record<string, ReminderDetail[]>> = {};
+
+  for (const reminder of reminderRows) {
+    const planId = reminder.plan_id;
+    if (!planId) continue;
+
+    const reminderDate = new Date(reminder.reminder_for);
+    const dayKey = formatLocalDateKey(reminderDate);
+
+    const matchingDay = last30Days.find((day) => day.key === dayKey);
+    if (!matchingDay) continue;
+
+    if (!trendMap[planId]) {
+      trendMap[planId] = last30Days.map((day) => ({
+        key: day.key,
+        label: day.label,
+        fullLabel: day.fullLabel,
+        total: 0,
+        completed: 0,
+        adherence: 0,
+      }));
+    }
+
+    if (!reminderDetailsMap[planId]) {
+      reminderDetailsMap[planId] = {};
+    }
+
+    if (!reminderDetailsMap[planId][dayKey]) {
+      reminderDetailsMap[planId][dayKey] = [];
+    }
+
+    const bucket = trendMap[planId].find((day) => day.key === dayKey);
+    if (!bucket) continue;
+
+    bucket.total += 1;
+    if (reminder.is_completed) {
+      bucket.completed += 1;
+    }
+
+    reminderDetailsMap[planId][dayKey].push({
+      id: reminder.id,
+      fullLabel: matchingDay.fullLabel,
+      timeLabel: formatTimeLabel(reminder.reminder_for),
+      completed: reminder.is_completed,
+    });
+  }
+
+  for (const planId of Object.keys(trendMap)) {
+    trendMap[planId] = trendMap[planId].map((day) => ({
+      ...day,
+      adherence:
+        day.total > 0 ? Math.round((day.completed / day.total) * 100) : 0,
+    }));
   }
 
   const plans = normalizeInjectionPlans(rawPlans ?? []);
@@ -139,75 +364,135 @@ export default async function PlansPage() {
                 No injection plans yet.
               </div>
             ) : (
-              plans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                        {plan.plan_name}
-                      </h3>
+              plans.map((plan) => {
+                const stats = adherenceMap[plan.id] || {
+                  total: 0,
+                  completed: 0,
+                  missed: 0,
+                };
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Peptide: {plan.peptide?.name || "Unknown peptide"}
-                      </p>
+                const adherence =
+                  stats.total > 0
+                    ? Math.round((stats.completed / stats.total) * 100)
+                    : 0;
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Dose: {plan.dose_amount} {plan.dose_unit}
-                      </p>
+                const adherenceStyles = getAdherenceStyles(adherence);
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Frequency:{" "}
-                        {plan.frequency_type === "every_x_days" &&
-                        plan.frequency_value
-                          ? `Every ${plan.frequency_value} days`
-                          : plan.frequency_type}
-                      </p>
+                const trend = trendMap[plan.id] || last30Days.map((day) => ({
+                  key: day.key,
+                  label: day.label,
+                  fullLabel: day.fullLabel,
+                  total: 0,
+                  completed: 0,
+                  adherence: 0,
+                }));
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Start: {plan.start_date}
-                      </p>
+                const trendSummary = getTrendSummary(trend);
+                const reminderDetailsByDay = reminderDetailsMap[plan.id] || {};
 
-                      {plan.end_date ? (
+                return (
+                  <div
+                    key={plan.id}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                          {plan.plan_name}
+                        </h3>
+
                         <p className="mt-1 text-sm text-[var(--color-muted)]">
-                          End: {plan.end_date}
+                          Peptide: {plan.peptide?.name || "Unknown peptide"}
                         </p>
-                      ) : null}
 
-                      {plan.default_time ? (
                         <p className="mt-1 text-sm text-[var(--color-muted)]">
-                          Default time: {plan.default_time}
+                          Dose: {plan.dose_amount} {plan.dose_unit}
                         </p>
-                      ) : null}
 
-                      {plan.notes ? (
-                        <p className="mt-2 text-sm text-[var(--color-muted)]">
-                          Notes: {plan.notes}
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          Frequency:{" "}
+                          {plan.frequency_type === "every_x_days" &&
+                          plan.frequency_value
+                            ? `Every ${plan.frequency_value} days`
+                            : plan.frequency_type}
                         </p>
-                      ) : null}
-                    </div>
 
-                    <div className="flex flex-col items-end gap-3">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
-                          plan.active
-                            ? "bg-green-50 text-green-700"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {plan.active ? "Active" : "Inactive"}
-                      </span>
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          Start: {plan.start_date}
+                        </p>
 
-                      <InjectionPlanActions
-                        planId={plan.id}
-                        active={plan.active}
-                      />
+                        {plan.end_date ? (
+                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                            End: {plan.end_date}
+                          </p>
+                        ) : null}
+
+                        {plan.default_time ? (
+                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                            Injection time: {plan.default_time}
+                          </p>
+                        ) : null}
+
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          Reminders:{" "}
+                          {plan.reminders_enabled
+                            ? `Enabled (${plan.reminder_offset_hours ?? 24}h before)`
+                            : "Disabled"}
+                        </p>
+
+                        <div
+                          className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
+                        >
+                          <span>Adherence</span>
+                          <span>{adherence}%</span>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-full bg-green-50 px-2 py-1 text-green-700">
+                            {stats.completed} completed
+                          </span>
+                          <span className="rounded-full bg-red-50 px-2 py-1 text-red-700">
+                            {stats.missed} missed
+                          </span>
+                          <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">
+                            {stats.total} total
+                          </span>
+                        </div>
+
+                        <PlanAdherenceSparkline
+                          points={trend}
+                          lineColor={adherenceStyles.line}
+                          trendSummary={trendSummary}
+                          reminderDetailsByDay={reminderDetailsByDay}
+                        />
+
+                        {plan.notes ? (
+                          <p className="mt-3 text-sm text-[var(--color-muted)]">
+                            Notes: {plan.notes}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-col items-end gap-3">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            plan.active
+                              ? "bg-green-50 text-green-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {plan.active ? "Active" : "Inactive"}
+                        </span>
+
+                        <InjectionPlanActions
+                          planId={plan.id}
+                          active={plan.active}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
