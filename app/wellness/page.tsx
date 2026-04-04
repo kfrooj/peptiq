@@ -434,9 +434,9 @@ export default async function WellnessPage({
   const currentLoggingStreak = getCurrentLoggingStreak(typedLogs);
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-text)]">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text)] sm:text-3xl">
           Wellness Tracker
         </h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
@@ -447,11 +447,11 @@ export default async function WellnessPage({
 
       <WellnessFilters peptides={peptideOptions ?? []} sites={availableSites} />
 
-      <div className="mt-6">
+      <div className="mt-4 sm:mt-6">
         <InjectionActivityChart data={chartData} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-2 lg:gap-6">
         <SiteUsageBodyAreaChart data={bodyAreaChartData} />
         <PeptideTimelineChart
           days={peptideTimelineData.days}
@@ -459,7 +459,7 @@ export default async function WellnessPage({
         />
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-4 grid gap-4 sm:mt-6 md:grid-cols-2 xl:grid-cols-6">
         <SummaryCard
           title="Total injections"
           value={String(totalInjections)}
@@ -504,8 +504,8 @@ export default async function WellnessPage({
         />
       </div>
 
-      <div className="mt-6 rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-[var(--color-text)]">
+      <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
+        <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
           Missed-Plan Reminders
         </h2>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
@@ -515,7 +515,7 @@ export default async function WellnessPage({
 
         <div className="mt-4 grid gap-4">
           {!missedPlanReminders.length ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
               No missed-plan reminders right now.
             </div>
           ) : (
@@ -525,20 +525,20 @@ export default async function WellnessPage({
                 className="rounded-2xl border border-amber-300 bg-amber-50 p-4"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-amber-800">
                       {reminder.planName}
                     </p>
-                    <p className="mt-1 text-sm text-amber-700">
+                    <p className="mt-1 text-sm leading-6 text-amber-700">
                       Peptide: {reminder.peptideName}
                     </p>
-                    <p className="mt-1 text-sm text-amber-700">
+                    <p className="mt-1 text-sm leading-6 text-amber-700">
                       Expected log due: {formatDate(reminder.dueAt)}
                     </p>
                     <p className="mt-1 text-xs uppercase tracking-wide text-amber-600">
                       Status: {reminder.status || "unknown"}
                     </p>
-                    <p className="mt-2 text-sm text-amber-700">
+                    <p className="mt-2 text-sm leading-6 text-amber-700">
                       You have not logged this planned injection yet.
                     </p>
                   </div>
@@ -551,9 +551,9 @@ export default async function WellnessPage({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+      <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Quick Insights
           </h2>
 
@@ -600,14 +600,14 @@ export default async function WellnessPage({
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Site Usage
           </h2>
 
           <div className="mt-4 grid gap-3">
             {!sortedSites.length ? (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
                 No site data yet.
               </div>
             ) : (
@@ -631,15 +631,15 @@ export default async function WellnessPage({
         </section>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+      <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-2 lg:gap-6">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Injections by Peptide
           </h2>
 
           <div className="mt-4 grid gap-3">
             {!sortedPeptides.length ? (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
                 No peptide data yet.
               </div>
             ) : (
@@ -662,14 +662,14 @@ export default async function WellnessPage({
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Recent Notes
           </h2>
 
           <div className="mt-4 grid gap-4">
             {!recentNotes.length ? (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
                 No injection notes yet.
               </div>
             ) : (
@@ -678,14 +678,14 @@ export default async function WellnessPage({
                   key={log.id}
                   className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
                 >
-                  <p className="text-sm font-medium text-[var(--color-text)]">
+                  <p className="text-sm font-medium leading-6 text-[var(--color-text)]">
                     {log.peptide?.name || "Unknown peptide"} ·{" "}
                     {formatDate(log.injection_at)}
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
                     Site: {log.site}
                   </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--color-muted)]">
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-muted)]">
                     {log.notes}
                   </p>
                 </div>
@@ -708,14 +708,16 @@ function SummaryCard({
   subtitle: string;
 }) {
   return (
-    <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
       <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
         {title}
       </p>
-      <p className="mt-2 text-2xl font-bold text-[var(--color-text)]">
+      <p className="mt-2 break-words text-xl font-bold text-[var(--color-text)] sm:text-2xl">
         {value}
       </p>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">{subtitle}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+        {subtitle}
+      </p>
     </section>
   );
 }

@@ -332,9 +332,9 @@ export default async function PlansPage() {
   const plans = normalizeInjectionPlans(rawPlans ?? []);
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-text)]">
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl font-bold text-[var(--color-text)] sm:text-3xl">
           Injection Plans
         </h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
@@ -342,9 +342,9 @@ export default async function PlansPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+      <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr] lg:gap-6">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Create New Plan
           </h2>
 
@@ -353,14 +353,14 @@ export default async function PlansPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Your Plans
           </h2>
 
           <div className="mt-4 grid gap-4">
             {!plans.length ? (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
                 No injection plans yet.
               </div>
             ) : (
@@ -393,23 +393,23 @@ export default async function PlansPage() {
                 return (
                   <div
                     key={plan.id}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                        <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
                           {plan.plan_name}
                         </h3>
 
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                           Peptide: {plan.peptide?.name || "Unknown peptide"}
                         </p>
 
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                           Dose: {plan.dose_amount} {plan.dose_unit}
                         </p>
 
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                           Frequency:{" "}
                           {plan.frequency_type === "every_x_days" &&
                           plan.frequency_value
@@ -417,23 +417,23 @@ export default async function PlansPage() {
                             : plan.frequency_type}
                         </p>
 
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                           Start: {plan.start_date}
                         </p>
 
                         {plan.end_date ? (
-                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                             End: {plan.end_date}
                           </p>
                         ) : null}
 
                         {plan.default_time ? (
-                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                             Injection time: {plan.default_time}
                           </p>
                         ) : null}
 
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                           Reminders:{" "}
                           {plan.reminders_enabled
                             ? `Enabled (${plan.reminder_offset_hours ?? 24}h before)`
@@ -441,7 +441,7 @@ export default async function PlansPage() {
                         </p>
 
                         <div
-                          className={`mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
+                          className={`mt-3 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
                         >
                           <span>Adherence</span>
                           <span>{adherence}%</span>
@@ -459,23 +459,25 @@ export default async function PlansPage() {
                           </span>
                         </div>
 
-                        <PlanAdherenceSparkline
-                          points={trend}
-                          lineColor={adherenceStyles.line}
-                          trendSummary={trendSummary}
-                          reminderDetailsByDay={reminderDetailsByDay}
-                        />
+                        <div className="mt-4">
+                          <PlanAdherenceSparkline
+                            points={trend}
+                            lineColor={adherenceStyles.line}
+                            trendSummary={trendSummary}
+                            reminderDetailsByDay={reminderDetailsByDay}
+                          />
+                        </div>
 
                         {plan.notes ? (
-                          <p className="mt-3 text-sm text-[var(--color-muted)]">
+                          <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
                             Notes: {plan.notes}
                           </p>
                         ) : null}
                       </div>
 
-                      <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-row items-center justify-between gap-3 lg:flex-col lg:items-end">
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium ${
                             plan.active
                               ? "bg-green-50 text-green-700"
                               : "bg-gray-100 text-gray-500"
