@@ -99,7 +99,61 @@ function formatJoinedDate(value: string | null | undefined) {
   }).format(date);
 }
 
-export default async function ProfilePage() {
+function getBannerMessage(success?: string, error?: string) {
+  if (error) {
+    const decoded = decodeURIComponent(error);
+
+    if (decoded === "password-too-short") {
+      return {
+        type: "error" as const,
+        text: "Password must be at least 8 characters.",
+      };
+    }
+
+    return {
+      type: "error" as const,
+      text: decoded,
+    };
+  }
+
+  if (success) {
+    const decoded = decodeURIComponent(success);
+
+    if (decoded === "password-updated") {
+      return {
+        type: "success" as const,
+        text: "Password updated successfully.",
+      };
+    }
+
+    if (decoded === "name-updated") {
+      return {
+        type: "success" as const,
+        text: "Profile name updated successfully.",
+      };
+    }
+
+    if (decoded === "notifications-updated") {
+      return {
+        type: "success" as const,
+        text: "Notification preferences updated successfully.",
+      };
+    }
+
+    return {
+      type: "success" as const,
+      text: decoded,
+    };
+  }
+
+  return null;
+}
+
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ success?: string; error?: string }>;
+}) {
   const supabase = await createClient();
 
   const {
@@ -109,6 +163,9 @@ export default async function ProfilePage() {
   if (!user) {
     redirect("/login");
   }
+
+  const params = searchParams ? await searchParams : {};
+  const banner = getBannerMessage(params?.success, params?.error);
 
   const [
     { data: profile, error: profileError },
@@ -191,27 +248,37 @@ export default async function ProfilePage() {
   const missedReminderAlerts = profileData?.missed_reminder_alerts ?? true;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 sm:mb-8">
+    <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mb-5 sm:mb-8">
         <h1 className="text-2xl font-bold text-[var(--color-text)] sm:text-3xl">
           Profile
         </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
+        <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
           Manage your account, preferences, and activity.
         </p>
       </div>
 
+      {banner ? (
+        <div
+          className={`mb-5 rounded-2xl border px-4 py-3 text-sm shadow-sm sm:mb-6 ${
+            banner.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {banner.text}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 lg:col-span-2">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-                Account Overview
-              </h2>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Your account details and basic profile information.
-              </p>
-            </div>
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+              Account Overview
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Your account details and basic profile information.
+            </p>
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -226,12 +293,12 @@ export default async function ProfilePage() {
                 name="name"
                 defaultValue={profileData?.name ?? ""}
                 placeholder="Enter your name"
-                className="mt-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-blue-500"
+                className="mt-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none focus:border-blue-500"
               />
 
               <button
                 type="submit"
-                className="mt-3 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white transition hover:bg-blue-500"
+                className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm text-white transition hover:bg-blue-500 sm:w-auto"
               >
                 Save
               </button>
@@ -280,7 +347,7 @@ export default async function ProfilePage() {
 
             <button
               disabled
-              className="mt-4 w-full rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)]"
+              className="mt-4 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-muted)]"
             >
               Manage Subscription (Coming Soon)
             </button>
@@ -330,7 +397,7 @@ export default async function ProfilePage() {
         </section>
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 lg:col-span-2">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
                 Favorites
@@ -342,7 +409,7 @@ export default async function ProfilePage() {
 
             <Link
               href="/peptides"
-              className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+              className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-center text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
             >
               Browse Peptides
             </Link>
@@ -350,7 +417,7 @@ export default async function ProfilePage() {
 
           <div className="mt-4">
             {normalizedFavorites.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)]">
+              <div className="rounded-xl border border-dashed border-[var(--color-border)] p-4 text-sm leading-6 text-[var(--color-muted)]">
                 No favorite peptides yet.
               </div>
             ) : (
@@ -394,7 +461,7 @@ export default async function ProfilePage() {
           </p>
 
           <div className="mt-4 space-y-4">
-            <label className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border)] p-4">
+            <label className="flex flex-col gap-3 rounded-xl border border-[var(--color-border)] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">
                   Email reminders
@@ -412,7 +479,7 @@ export default async function ProfilePage() {
               />
             </label>
 
-            <label className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border)] p-4">
+            <label className="flex flex-col gap-3 rounded-xl border border-[var(--color-border)] p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">
                   Missed reminder alerts
@@ -433,7 +500,7 @@ export default async function ProfilePage() {
 
           <button
             type="submit"
-            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition hover:bg-blue-500"
+            className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-3 text-sm text-white transition hover:bg-blue-500 sm:w-auto"
           >
             Save Preferences
           </button>
@@ -444,26 +511,51 @@ export default async function ProfilePage() {
             Security & Account
           </h2>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <form action="/auth/signout" method="post">
-              <button className="rounded-xl bg-blue-600 px-4 py-2 text-sm text-white transition hover:bg-blue-500">
-                Sign Out
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <form
+              action="/profile/change-password"
+              method="post"
+              className="rounded-xl border border-[var(--color-border)] p-4"
+            >
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Change Password
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                Update your password while logged in.
+              </p>
+
+              <input
+                type="password"
+                name="password"
+                minLength={8}
+                required
+                placeholder="New password"
+                className="mt-3 w-full rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm text-[var(--color-text)] outline-none focus:border-blue-500"
+              />
+
+              <button
+                type="submit"
+                className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-blue-500 sm:w-auto"
+              >
+                Change Password
               </button>
             </form>
 
-            <button
-              disabled
-              className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)]"
-            >
-              Reset Password (Coming Soon)
-            </button>
+            <div className="rounded-xl border border-[var(--color-border)] p-4">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Account Tools
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                More account options will be added here as PEPTIQ grows.
+              </p>
 
-            <button
-              disabled
-              className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)]"
-            >
-              Export Data (Coming Soon)
-            </button>
+              <button
+                disabled
+                className="mt-3 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-muted)] sm:w-auto"
+              >
+                Export Data (Coming Soon)
+              </button>
+            </div>
           </div>
         </section>
       </div>

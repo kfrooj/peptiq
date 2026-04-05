@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import SiteHeader from "@/components/SiteHeader";
 import { createClient } from "@/lib/supabase/server";
+import AppShell from "@/components/AppShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,8 +52,9 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--color-background)]">
-        <SiteHeader user={user} isAdmin={isAdmin} />
-        <div className="flex-1">{children}</div>
+        <AppShell user={user} isAdmin={isAdmin}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

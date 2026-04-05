@@ -144,82 +144,135 @@ export default async function LogInjectionPage({
   const initialInjectionAt = injectionAt ? toDateTimeLocalValue(injectionAt) : "";
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[var(--color-text)]">
-          Injection Logging
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Log your injections and keep a complete wellness history.
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p className="text-sm font-medium text-amber-900">
+          Personal reference logging only. This feature does not provide medical
+          advice or treatment guidance.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
-            Log New Injection
-          </h2>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text)]">
+          Injection Logging
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+          Log injections, track site rotation, and keep a complete history in a
+          mobile-friendly format.
+        </p>
+      </div>
 
-          <div className="mt-4">
-            <NewInjectionLogForm
-              peptides={peptides ?? []}
-              plans={plans}
-              initialPlanId={initialPlanId}
-              initialInjectionAt={initialInjectionAt}
-            />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+              Log New Injection
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Use the body map below in the form to choose the injection site.
+            </p>
           </div>
+
+          <NewInjectionLogForm
+            peptides={peptides ?? []}
+            plans={plans}
+            initialPlanId={initialPlanId}
+            initialInjectionAt={initialInjectionAt}
+          />
         </section>
 
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
-            Injection History
-          </h2>
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--color-text)]">
+                Injection History
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Your recent entries, newest first.
+              </p>
+            </div>
 
-          <div className="mt-4 grid gap-4">
+            <span className="inline-flex self-start rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-muted)]">
+              {logs.length} {logs.length === 1 ? "entry" : "entries"}
+            </span>
+          </div>
+
+          <div className="grid gap-4">
             {!logs.length ? (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
                 No injections logged yet.
               </div>
             ) : (
               logs.map((log) => (
-                <div
+                <article
                   key={log.id}
                   className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                        {log.peptide?.name || "Unknown peptide"}
-                      </h3>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
+                          {log.peptide?.name || "Unknown peptide"}
+                        </h3>
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Date: {new Date(log.injection_at).toLocaleString()}
-                      </p>
+                        {log.peptide?.category ? (
+                          <span className="inline-flex rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs font-medium text-[var(--color-muted)]">
+                            {log.peptide.category}
+                          </span>
+                        ) : null}
+                      </div>
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Dose: {log.dose_amount} {log.dose_unit}
-                      </p>
+                      <dl className="mt-3 grid gap-2 text-sm text-[var(--color-muted)]">
+                        <div className="flex flex-wrap gap-2">
+                          <dt className="font-medium text-[var(--color-text)]">
+                            Date:
+                          </dt>
+                          <dd>{new Date(log.injection_at).toLocaleString()}</dd>
+                        </div>
 
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Site: {log.site}
-                      </p>
+                        <div className="flex flex-wrap gap-2">
+                          <dt className="font-medium text-[var(--color-text)]">
+                            Dose:
+                          </dt>
+                          <dd>
+                            {log.dose_amount} {log.dose_unit}
+                          </dd>
+                        </div>
 
-                      {log.plan?.plan_name ? (
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
-                          Plan: {log.plan.plan_name}
-                        </p>
-                      ) : null}
+                        <div className="flex flex-wrap gap-2">
+                          <dt className="font-medium text-[var(--color-text)]">
+                            Site:
+                          </dt>
+                          <dd>{log.site}</dd>
+                        </div>
 
-                      {log.notes ? (
-                        <p className="mt-2 text-sm text-[var(--color-muted)]">
-                          Notes: {log.notes}
-                        </p>
-                      ) : null}
+                        {log.plan?.plan_name ? (
+                          <div className="flex flex-wrap gap-2">
+                            <dt className="font-medium text-[var(--color-text)]">
+                              Plan:
+                            </dt>
+                            <dd>{log.plan.plan_name}</dd>
+                          </div>
+                        ) : null}
+
+                        {log.notes ? (
+                          <div className="mt-1">
+                            <dt className="font-medium text-[var(--color-text)]">
+                              Notes:
+                            </dt>
+                            <dd className="mt-1 whitespace-pre-wrap text-[var(--color-muted)]">
+                              {log.notes}
+                            </dd>
+                          </div>
+                        ) : null}
+                      </dl>
                     </div>
 
-                    <InjectionLogActions logId={log.id} />
+                    <div className="shrink-0 self-start">
+                      <InjectionLogActions logId={log.id} />
+                    </div>
                   </div>
-                </div>
+                </article>
               ))
             )}
           </div>

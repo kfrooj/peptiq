@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
-import { getPeptideBySlug } from "@/lib/peptides";
 import Link from "next/link";
+import { getPeptideBySlug } from "@/lib/peptides";
 import PeptideFavoriteStarButton from "@/components/PeptideFavoriteStarButton";
-import { createClient } from "@/lib/supabase/server";
 
 export default async function PeptideDetailPage({
   params,
@@ -16,169 +15,293 @@ export default async function PeptideDetailPage({
     notFound();
   }
 
-  const supabase = await createClient();
+  const description =
+    getOptionalField(peptide, [
+      "description",
+      "summary",
+      "short_description",
+      "overview",
+    ]) || "Structured reference information for educational browsing only.";
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const reportedEffects = toBulletList(peptide.benefits);
 
-  let isFavorite = false;
+  const lowDose =
+    getOptionalField(peptide, [
+      "reference_dose_low",
+      "low_dose",
+      "dose_low",
+      "dosage_low",
+    ]) || "Not added yet.";
 
-  if (user) {
-    const { data: favorite } = await supabase
-      .from("favorite_peptides")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("peptide_id", peptide.id)
-      .maybeSingle();
+  const typicalDose =
+    getOptionalField(peptide, [
+      "reference_dose_typical",
+      "typical_dose",
+      "dose_typical",
+      "dosage_typical",
+      "typical_research_protocol",
+    ]) || "Not added yet.";
 
-    isFavorite = !!favorite;
-  }
+  const highDose =
+    getOptionalField(peptide, [
+      "reference_dose_high",
+      "high_dose",
+      "dose_high",
+      "dosage_high",
+    ]) || "Not added yet.";
+
+  const frequencyReference =
+    getOptionalField(peptide, [
+      "frequency_reference",
+      "frequency",
+      "duration",
+      "general_administration_rules",
+      "typical_research_protocol",
+    ]) || "No information added yet.";
+
+  const researchLinks = parseReferenceLinks(peptide.references);
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
-      <div className="mb-8 overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-gray-50">
-        <div className="p-8">
-          <div className="flex items-start justify-between gap-6">
-            <div className="min-w-0 flex-1">
-              <p className="mb-3 inline-block rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-600">
-                {peptide.category}
-              </p>
+    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p className="text-sm font-medium text-amber-900">
+          Reference information only, not medical advice.
+        </p>
+      </div>
 
-              <h1 className="text-4xl font-bold tracking-tight">
-                {peptide.name}
-              </h1>
+      <section className="mb-6 overflow-hidden rounded-3xl border bg-white shadow-sm">
+        <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-[minmax(0,1fr)_280px] md:items-start">
+          <div className="min-w-0">
+            <p className="mb-3 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+              {peptide.category}
+            </p>
 
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600">
-                Structured research information for educational and informational
-                browsing.
-              </p>
+            <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl">
+              {peptide.name}
+            </h1>
 
-              <div className="mt-5">
-                <Link
-                  href={`/calculator?peptide=${encodeURIComponent(
-                    peptide.name
-                  )}&vialMg=${peptide.default_vial_mg ?? ""}&mixMl=${
-                    peptide.default_mixing_volume_ml ?? ""
-                  }&sampleMcg=${peptide.default_sample_size_mcg ?? ""}`}
-                  className="inline-flex rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
-                >
-                  Open in calculator
-                </Link>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-muted)]">
+              {description}
+            </p>
+          </div>
+
+          <aside className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  Save
+                </p>
+                <p className="mt-1 text-sm text-[var(--color-text)]">
+                  Add this peptide to favorites.
+                </p>
+              </div>
+
+              <div className="shrink-0">
+                <PeptideFavoriteStarButton peptideId={peptide.id} />
               </div>
             </div>
 
-            <div className="shrink-0">
-              <PeptideFavoriteStarButton
-                peptideId={peptide.id}
-                initialIsFavorite={isFavorite}
-              />
+            <div className="mt-5 border-t border-[var(--color-border)] pt-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                Tools
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-text)]">
+                Open this peptide directly in the calculator.
+              </p>
+
+              <Link
+                href={`/calculator?peptide=${encodeURIComponent(
+                  peptide.name
+                )}&vialMg=${peptide.default_vial_mg ?? ""}&mixMl=${
+                  peptide.default_mixing_volume_ml ?? ""
+                }&sampleMcg=${peptide.default_sample_size_mcg ?? ""}`}
+                className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+              >
+                Open in calculator
+              </Link>
             </div>
-          </div>
+          </aside>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <DetailCard title="Benefits" content={peptide.benefits} />
-        <DetailCard
-          title="Typical Research Protocol"
-          content={peptide.typical_research_protocol}
-        />
-        <DetailCard title="Duration" content={peptide.duration} />
-        <DetailCard
-          title="Common Sides / Regulatory"
-          content={peptide.common_sides_regulatory}
-        />
-        <DetailCard
-          title="Most Popular Stacks"
-          content={peptide.most_popular_stacks}
-        />
-        <DetailCard
-          title="General Administration Rules"
-          content={peptide.general_administration_rules}
-        />
-        <ReferencesCard content={peptide.references} />
-      </div>
+      <div className="grid gap-5">
+        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
+            Reported Effects
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Community sourced data, not verified claims.
+          </p>
 
-      <div className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-6 shadow-sm">
-        <h2 className="mb-2 text-lg font-semibold">Research-only disclaimer</h2>
-        <p className="text-sm leading-6 text-gray-700">{peptide.disclaimer}</p>
+          {reportedEffects.length ? (
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-7 text-[var(--color-text)]">
+              {reportedEffects.map((item, index) => (
+                <li key={`${item}-${index}`}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm leading-7 text-[var(--color-muted)]">
+              No information added yet.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
+            Reference Dosage Ranges
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Community-referenced data, not recommendations.
+          </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <DosageTile label="Low" value={lowDose} />
+            <DosageTile label="Typical" value={typicalDose} />
+            <DosageTile label="High" value={highDose} />
+          </div>
+        </section>
+
+        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
+            Frequency Reference
+          </h2>
+
+          <div className="mt-4 rounded-2xl bg-[var(--color-surface-muted)] p-4">
+            <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--color-text)]">
+              {frequencyReference}
+            </p>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
+            Published Research
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Peer-reviewed publications on PubMed.
+          </p>
+
+          {researchLinks.length ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {researchLinks.map((item, index) => (
+                <a
+                  key={`${item.url}-${index}`}
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-7 text-[var(--color-muted)]">
+              No published research links added yet.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold tracking-tight text-amber-950">
+            Reference Information
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-amber-900">
+            Data compiled from community sources for reference only. This
+            information does not constitute medical advice, diagnosis, or
+            treatment guidance and should not be used as a basis for any
+            health-related decisions.
+          </p>
+        </section>
       </div>
     </main>
   );
 }
 
-function DetailCard({
-  title,
-  content,
+function DosageTile({
+  label,
+  value,
 }: {
-  title: string;
-  content: string | null;
+  label: string;
+  value: string;
 }) {
   return (
-    <section className="rounded-2xl border bg-white p-6 shadow-sm">
-      <h2 className="mb-3 text-lg font-semibold tracking-tight">{title}</h2>
-      <p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
-        {content || "No information added yet."}
+    <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+        {label}
       </p>
-    </section>
+      <p className="mt-2 text-sm leading-6 text-[var(--color-text)]">{value}</p>
+    </div>
   );
 }
 
-function ReferencesCard({
-  content,
-}: {
-  content: string | null;
-}) {
+function getOptionalField(peptide: unknown, keys: string[]): string | null {
+  const record = peptide as Record<string, unknown>;
+
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
+function toBulletList(content: string | null): string[] {
+  if (!content) return [];
+
   const lines = content
-    ? content
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-    : [];
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  return (
-    <section className="rounded-2xl border bg-white p-6 shadow-sm md:col-span-2">
-      <h2 className="mb-3 text-lg font-semibold tracking-tight">
-        References / Sources
-      </h2>
+  if (lines.length > 1) {
+    return lines.map((line) => line.replace(/^[-•*]\s?/, "").trim());
+  }
 
-      {!lines.length ? (
-        <p className="text-sm leading-7 text-gray-700">
-          No information added yet.
-        </p>
-      ) : (
-        <ul className="space-y-3 text-sm leading-7 text-gray-700">
-          {lines.map((line, index) => {
-            const urlMatch = line.match(/https?:\/\/\S+/);
+  return content
+    .split(/[\n•;-]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => item.replace(/^[-•*]\s?/, "").trim());
+}
 
-            if (urlMatch) {
-              const url = urlMatch[0];
-              const label = line.replace(url, "").trim();
+function parseReferenceLinks(content: string | null): Array<{
+  label: string;
+  url: string;
+}> {
+  if (!content) return [];
 
-              return (
-                <li key={index} className="rounded-lg border p-3">
-                  {label ? <p className="mb-1 font-medium">{label}</p> : null}
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="break-all text-blue-600 underline"
-                  >
-                    {url}
-                  </a>
-                </li>
-              );
-            }
+  const lines = content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-            return (
-              <li key={index} className="rounded-lg border p-3">
-                {line}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
+  return lines
+    .map((line) => {
+      const urlMatch = line.match(/https?:\/\/\S+/);
+      if (!urlMatch) return null;
+
+      const url = urlMatch[0];
+      const rawLabel = line.replace(url, "").trim();
+
+      let label = rawLabel;
+
+      if (!label) {
+        try {
+          const parsed = new URL(url);
+          label =
+            parsed.hostname.includes("pubmed") ||
+            parsed.hostname.includes("ncbi.nlm.nih.gov")
+              ? "Open PubMed article"
+              : "Open source";
+        } catch {
+          label = "Open source";
+        }
+      }
+
+      return { label, url };
+    })
+    .filter((item): item is { label: string; url: string } => Boolean(item));
 }

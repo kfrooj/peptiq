@@ -159,6 +159,44 @@ function getLast7DaysChartData(logs: InjectionLog[]) {
   }));
 }
 
+function normalizeSiteLabel(site: string) {
+  const value = site.trim().toLowerCase();
+
+  if (value === "left-arm" || value === "left arm" || value === "left upper arm") {
+    return "Left upper arm";
+  }
+
+  if (value === "right-arm" || value === "right arm" || value === "right upper arm") {
+    return "Right upper arm";
+  }
+
+  if (value === "left-abdomen" || value === "left abdomen") {
+    return "Left abdomen";
+  }
+
+  if (value === "right-abdomen" || value === "right abdomen") {
+    return "Right abdomen";
+  }
+
+  if (value === "left-thigh" || value === "left thigh") {
+    return "Left thigh";
+  }
+
+  if (value === "right-thigh" || value === "right thigh") {
+    return "Right thigh";
+  }
+
+  if (value === "left-glute" || value === "left glute") {
+    return "Left glute";
+  }
+
+  if (value === "right-glute" || value === "right glute") {
+    return "Right glute";
+  }
+
+  return site;
+}
+
 function normalizeBodyArea(site: string) {
   const value = site.toLowerCase();
 
@@ -171,7 +209,8 @@ function normalizeBodyArea(site: string) {
 
 function getBodyAreaChartData(logs: InjectionLog[]) {
   const counts = logs.reduce<Record<string, number>>((acc, log) => {
-    const area = normalizeBodyArea(log.site || "Other");
+    const normalizedSite = normalizeSiteLabel(log.site || "Other");
+    const area = normalizeBodyArea(normalizedSite);
     acc[area] = (acc[area] || 0) + 1;
     return acc;
   }, {});
@@ -357,7 +396,7 @@ export default async function WellnessPage({
     injection_at: log.injection_at,
     dose_amount: log.dose_amount,
     dose_unit: log.dose_unit,
-    site: log.site,
+    site: normalizeSiteLabel(log.site),
     notes: log.notes,
     plan_id: log.plan_id ?? null,
     peptide: normalizeSingleRelation<PeptideRelation>(log.peptide),
@@ -401,7 +440,7 @@ export default async function WellnessPage({
   }, {});
 
   const siteCounts = typedLogs.reduce<Record<string, number>>((acc, log) => {
-    const key = log.site || "Unknown site";
+    const key = normalizeSiteLabel(log.site || "Unknown site");
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -421,7 +460,7 @@ export default async function WellnessPage({
   const availableSites = Array.from(
     new Set(
       (logs ?? [])
-        .map((log: any) => log.site)
+        .map((log: any) => normalizeSiteLabel(log.site))
         .filter((value: string | null | undefined) => !!value)
     )
   ).sort();
@@ -618,7 +657,7 @@ export default async function WellnessPage({
                 >
                   <div className="flex items-center justify-between gap-4">
                     <p className="text-sm font-medium text-[var(--color-text)]">
-                      {siteName}
+                      {normalizeSiteLabel(siteName)}
                     </p>
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]">
                       {count}
@@ -683,7 +722,7 @@ export default async function WellnessPage({
                     {formatDate(log.injection_at)}
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Site: {log.site}
+                    Site: {normalizeSiteLabel(log.site)}
                   </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-muted)]">
                     {log.notes}

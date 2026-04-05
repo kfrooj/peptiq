@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
@@ -13,7 +14,46 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-[var(--color-background)]">
-      <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 sm:pb-16 sm:pt-14">
+      <section className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-10">
+        <div className="mb-8 flex items-center justify-between gap-4 md:hidden">
+          <Link href="/" className="shrink-0">
+            <Image
+              src="/peptiq-logo.png"
+              alt="PEPTIQ"
+              width={180}
+              height={44}
+              priority
+              className="h-8 w-auto"
+            />
+          </Link>
+
+          <div className="flex items-center gap-2">
+            {user ? (
+              <Link
+                href="/dashboard"
+                className="rounded-full border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+
         <div className="grid items-start gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10">
           <div>
             <span className="inline-flex rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">

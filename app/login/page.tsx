@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -16,32 +17,23 @@ export default function LoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
     setError(null);
     setMessage(null);
     setIsLoading(true);
 
     const supabase = createClient();
-    const trimmedEmail = email.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
+          email: normalizedEmail,
           password,
         });
 
         if (error) {
-          const lowerMessage = error.message.toLowerCase();
-
-          if (
-            lowerMessage.includes("invalid") ||
-            lowerMessage.includes("credentials")
-          ) {
-            setError("Invalid email or password.");
-          } else {
-            setError(error.message);
-          }
-
+          setError(error.message);
           setIsLoading(false);
           return;
         }
@@ -51,16 +43,22 @@ export default function LoginPage() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          setError("Login failed.");
+          setError("Login failed. Please try again.");
           setIsLoading(false);
           return;
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
+
+        if (profileError) {
+          setError("Could not load user profile.");
+          setIsLoading(false);
+          return;
+        }
 
         if (profile?.role === "admin") {
           router.push("/admin/peptides");
@@ -70,19 +68,14 @@ export default function LoginPage() {
 
         router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({
-          email: trimmedEmail,
+        const { data, error } = await supabase.auth.signUp({
+          email: normalizedEmail,
           password,
         });
 
         if (error) {
-          const lowerMessage = error.message.toLowerCase();
-
-          if (
-            lowerMessage.includes("already") ||
-            lowerMessage.includes("exists")
-          ) {
-            setError("An account with this email may already exist. Try logging in.");
+          if (error.message.toLowerCase().includes("already")) {
+            setError("An account with this email already exists.");
           } else {
             setError(error.message);
           }
@@ -91,10 +84,31 @@ export default function LoginPage() {
           return;
         }
 
-        setMessage(
-          "If this email is new, your account has been created. If it already exists, try logging in instead. Check your email if confirmation is required."
-        );
+        if (!data.user) {
+          setError("Account could not be created.");
+          setIsLoading(false);
+          return;
+        }
+
+        const { error: profileInsertError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: data.user.id,
+            name: null,
+            role: "user",
+            email_reminders: true,
+            missed_reminder_alerts: true,
+          });
+
+        if (profileInsertError) {
+          setError("Account created, but profile setup failed.");
+          setIsLoading(false);
+          return;
+        }
+
+        setMessage("Account created successfully. You can now log in.");
         setMode("login");
+        setEmail(normalizedEmail);
         setPassword("");
       }
     } catch {
@@ -170,9 +184,7 @@ export default function LoginPage() {
           />
         </label>
 
-        {error ? (
-          <p className="mb-3 text-sm text-red-600">{error}</p>
-        ) : null}
+        {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
 
         {message ? (
           <p className="mb-3 text-sm text-green-600">{message}</p>
@@ -191,9 +203,20 @@ export default function LoginPage() {
               ? "Logging in..."
               : "Creating account..."
             : mode === "login"
-            ? "Sign in"
-            : "Create account"}
+              ? "Sign in"
+              : "Create account"}
         </button>
+
+        {mode === "login" ? (
+          <div className="mt-4 text-center">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-blue-600 transition hover:text-blue-500"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        ) : null}
       </form>
     </main>
   );

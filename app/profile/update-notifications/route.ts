@@ -28,5 +28,5 @@ export async function POST(request: Request) {
     throw new Error(error.message);
   }
 
-  redirect("/profile");
+  redirect("/profile?success=notifications-updated");
 }

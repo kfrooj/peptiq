@@ -16,13 +16,26 @@ type ReminderRow = {
 };
 
 type InjectionLogRow = {
+  id: string;
   injection_at: string;
+  dose_amount: number | null;
+  dose_unit: string | null;
+  site: string | null;
+  peptide: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 type PlanRow = {
   id: string;
   plan_name: string;
   active: boolean;
+};
+
+type ProfileRow = {
+  id: string;
+  name: string | null;
 };
 
 function formatLocalDate(value: string | Date) {
@@ -70,24 +83,40 @@ export default async function DashboardPage() {
   const now = new Date();
 
   const [
+    { data: profile, error: profileError },
     { data: logs, error: logsError },
     { data: plans, error: plansError },
     { data: reminders, error: remindersError },
   ] = await Promise.all([
     supabase
+      .from("profiles")
+      .select("id, name")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
       .from("injection_logs")
-      .select("injection_at")
+      .select(
+        `
+          id,
+          injection_at,
+          dose_amount,
+          dose_unit,
+          site,
+          peptide:peptides (
+            id,
+            name
+          )
+        `
+      )
       .eq("user_id", user.id)
       .order("injection_at", { ascending: false })
-      .limit(20),
-
+      .limit(5),
     supabase
       .from("injection_plans")
       .select("id, plan_name, active")
       .eq("user_id", user.id)
       .eq("active", true)
       .order("created_at", { ascending: false }),
-
     supabase
       .from("plan_reminders")
       .select(
@@ -107,11 +136,26 @@ export default async function DashboardPage() {
       .eq("user_id", user.id),
   ]);
 
+  if (profileError) throw new Error(profileError.message);
   if (logsError) throw new Error(logsError.message);
   if (plansError) throw new Error(plansError.message);
   if (remindersError) throw new Error(remindersError.message);
 
-  const typedLogs: InjectionLogRow[] = logs ?? [];
+  const profileData = profile as ProfileRow | null;
+  const displayName =
+    profileData?.name?.trim() || user.email?.split("@")[0] || "there";
+
+  const typedLogs: InjectionLogRow[] = (logs ?? []).map((row: any) => ({
+    id: row.id,
+    injection_at: row.injection_at,
+    dose_amount: row.dose_amount ?? null,
+    dose_unit: row.dose_unit ?? null,
+    site: row.site ?? null,
+    peptide: Array.isArray(row.peptide)
+      ? row.peptide[0] ?? null
+      : row.peptide ?? null,
+  }));
+
   const typedPlans: PlanRow[] = plans ?? [];
   const typedReminders: ReminderRow[] = (reminders ?? []).map((row: any) => ({
     id: row.id,
@@ -122,6 +166,8 @@ export default async function DashboardPage() {
     status: row.status ?? null,
     plan: Array.isArray(row.plan) ? row.plan[0] ?? null : row.plan ?? null,
   }));
+
+  const isFirstTimeState = !typedPlans.length && !typedLogs.length;
 
   const lastInjection = typedLogs[0] ? new Date(typedLogs[0].injection_at) : null;
   const daysSinceLast =
@@ -208,138 +254,319 @@ export default async function DashboardPage() {
   );
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text)] sm:text-3xl">
-          Dashboard
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Your current status, reminders, and next actions.
-        </p>
-      </div>
-
-      <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+      <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mb-8 sm:rounded-3xl sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--color-text)]">
-              Today
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              A quick view of where things stand right now.
+            <p className="text-sm font-medium text-[var(--color-accent)]">
+              Welcome back
+            </p>
+            <h1 className="mt-1 text-2xl font-bold leading-tight text-[var(--color-text)] sm:text-3xl">
+              {displayName}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+              Here’s your PEPTIQ snapshot for today — what needs attention, what
+              is coming up next, and where to jump back in.
             </p>
           </div>
 
-          <span
+          <div
             className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
               adherenceTone === "green"
                 ? "bg-green-50 text-green-700"
                 : adherenceTone === "amber"
-                ? "bg-amber-50 text-amber-700"
-                : "bg-red-50 text-red-700"
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-red-50 text-red-700"
             }`}
           >
-            Adherence {adherence}%
-          </span>
-        </div>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Last injection"
-            value={lastInjection ? formatLocalDate(lastInjection) : "—"}
-            subtitle={
-              daysSinceLast !== null
-                ? `${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago`
-                : "No logged injections yet"
-            }
-          />
-
-          <StatCard
-            title="Next reminder"
-            value={
-              nextUnresolvedReminder
-                ? formatLocalDate(nextUnresolvedReminder.reminder_for)
-                : "—"
-            }
-            subtitle={
-              nextUnresolvedReminder
-                ? `${
-                    nextUnresolvedReminder.plan?.plan_name || "Planned injection"
-                  } · ${formatLocalDateTime(nextUnresolvedReminder.reminder_for)}`
-                : "No upcoming unresolved reminders"
-            }
-            href={nextUnresolvedReminder ? nextReminderHref : undefined}
-          />
-
-          <StatCard
-            title="Missed reminders"
-            value={String(unresolvedMissedReminders.length)}
-            subtitle="Unresolved planned injections"
-          />
-
-          <StatCard
-            title="Active plans"
-            value={String(typedPlans.length)}
-            subtitle="Currently running"
-          />
+            30-day adherence {adherence}%
+          </div>
         </div>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
-        <h2 className="text-lg font-semibold text-[var(--color-text)]">
-          Alerts
-        </h2>
+      {isFirstTimeState ? (
+        <section className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+          <div className="max-w-3xl">
+            <h2 className="text-lg font-semibold text-blue-900 sm:text-xl">
+              Let’s get your tracking set up
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-blue-800">
+              You’re just getting started. Create your first plan, then log your
+              first injection to unlock reminders, adherence tracking, and
+              wellness insights.
+            </p>
 
-        <div className="mt-4 grid gap-3">
-          {!alerts.length ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)] sm:p-5">
-              Everything looks on track.
-            </div>
-          ) : (
-            alerts.map((alert) => (
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <Link
-                key={alert.title}
-                href={alert.href}
-                className="rounded-2xl border border-amber-300 bg-amber-50 p-4 transition hover:shadow-sm"
+                href="/plans"
+                className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
               >
-                <p className="text-sm font-semibold text-amber-900">
-                  {alert.title}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-amber-800">
-                  {alert.body}
-                </p>
+                Create First Plan
               </Link>
-            ))
-          )}
-        </div>
+
+              <Link
+                href="/peptides"
+                className="rounded-xl border border-blue-200 bg-white px-4 py-3 text-center text-sm font-medium text-blue-900 transition hover:bg-blue-100"
+              >
+                Browse Peptides
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Active Plans"
+          value={String(typedPlans.length)}
+          subtitle="Currently running"
+        />
+
+        <StatCard
+          title="Missed Reminders"
+          value={String(unresolvedMissedReminders.length)}
+          subtitle="Need attention"
+          href={unresolvedMissedReminders.length > 0 ? "/wellness" : undefined}
+        />
+
+        <StatCard
+          title="Last Injection"
+          value={lastInjection ? formatLocalDate(lastInjection) : "—"}
+          subtitle={
+            daysSinceLast !== null
+              ? `${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago`
+              : "No logged injections yet"
+          }
+        />
+
+        <StatCard
+          title="Next Reminder"
+          value={
+            nextUnresolvedReminder
+              ? formatLocalDate(nextUnresolvedReminder.reminder_for)
+              : "—"
+          }
+          subtitle={
+            nextUnresolvedReminder
+              ? `${nextUnresolvedReminder.plan?.plan_name || "Planned injection"}`
+              : "No upcoming unresolved reminders"
+          }
+          href={nextUnresolvedReminder ? nextReminderHref : undefined}
+        />
       </section>
 
-      <section className="mt-4 grid gap-4 sm:mt-6 sm:grid-cols-2">
-        <ActionCard
-          title="Log injection"
-          description="Record a new injection and keep reminders in sync."
-          href="/log-injection"
-        />
-        <ActionCard
-          title="View wellness"
-          description="Review trends, missed reminders, and overall adherence."
-          href="/wellness"
-        />
-        <ActionCard
-          title="Manage plans"
-          description="Create, update, and organize your active protocols."
-          href="/plans"
-        />
-        <ActionCard
-          title="Browse peptides"
-          description="Open the peptide library and review research details."
-          href="/peptides"
-        />
+      <section className="mt-5 grid gap-4 lg:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+            Today’s Next Step
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            The next action that will keep your tracking up to date.
+          </p>
+
+          <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
+            {nextUnresolvedReminder ? (
+              <>
+                <p className="text-sm font-semibold text-[var(--color-text)]">
+                  {nextUnresolvedReminder.plan?.plan_name || "Planned injection"}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                  Scheduled for {formatLocalDateTime(nextUnresolvedReminder.reminder_for)}
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link
+                    href={nextReminderHref}
+                    className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
+                  >
+                    Log Injection
+                  </Link>
+
+                  <Link
+                    href="/wellness"
+                    className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-center text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                  >
+                    View Wellness
+                  </Link>
+                </div>
+              </>
+            ) : typedPlans.length > 0 ? (
+              <>
+                <p className="text-sm font-semibold text-[var(--color-text)]">
+                  Nothing due right now
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                  You do not have any upcoming unresolved reminders at the
+                  moment. You can still log an injection or review your progress.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link
+                    href="/log-injection"
+                    className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
+                  >
+                    Log Injection
+                  </Link>
+
+                  <Link
+                    href="/wellness"
+                    className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-center text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                  >
+                    View Wellness
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-[var(--color-text)]">
+                  Start by creating your first plan
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                  Plans power reminders, adherence tracking, and the rest of your
+                  dashboard experience.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link
+                    href="/plans"
+                    className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
+                  >
+                    Create Plan
+                  </Link>
+
+                  <Link
+                    href="/peptides"
+                    className="rounded-xl border border-[var(--color-border)] px-4 py-3 text-center text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                  >
+                    Browse Peptides
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+            Alerts
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            Things that may need your attention.
+          </p>
+
+          <div className="mt-4 grid gap-3">
+            {!alerts.length ? (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)]">
+                Everything looks on track.
+              </div>
+            ) : (
+              alerts.map((alert) => (
+                <Link
+                  key={alert.title}
+                  href={alert.href}
+                  className="rounded-2xl border border-amber-300 bg-amber-50 p-4 transition hover:shadow-sm"
+                >
+                  <p className="text-sm font-semibold text-amber-900">
+                    {alert.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-800">
+                    {alert.body}
+                  </p>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
-        <h2 className="text-lg font-semibold text-[var(--color-text)]">
-          Quick status
+      <section className="mt-5 grid gap-4 sm:mt-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+            Quick Actions
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            Jump straight into the most common tasks.
+          </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <ActionCard
+              title="Log Injection"
+              description="Record a new injection and keep reminders in sync."
+              href="/log-injection"
+            />
+            <ActionCard
+              title="Manage Plans"
+              description="Create, update, and organize your active protocols."
+              href="/plans"
+            />
+            <ActionCard
+              title="View Wellness"
+              description="Review trends, missed reminders, and adherence."
+              href="/wellness"
+            />
+            <ActionCard
+              title="Browse Peptides"
+              description="Open the peptide library and review details."
+              href="/peptides"
+            />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+            Recent Activity
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            Your latest logged injections.
+          </p>
+
+          <div className="mt-4 grid gap-3">
+            {!typedLogs.length ? (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm leading-6 text-[var(--color-muted)]">
+                No recent injections logged yet. Once you log activity, it will
+                appear here so you can quickly review your latest entries.
+              </div>
+            ) : (
+              typedLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text)]">
+                        {log.peptide?.name || "Injection logged"}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                        {[
+                          log.dose_amount !== null && log.dose_unit
+                            ? `${log.dose_amount} ${log.dose_unit}`
+                            : null,
+                          log.site ? `Site: ${log.site}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Details recorded"}
+                      </p>
+                    </div>
+
+                    <p className="text-sm text-[var(--color-muted)] sm:text-right">
+                      {formatLocalDateTime(log.injection_at)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </section>
+
+      <section className="mt-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
+        <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+          Quick Status
         </h2>
+        <p className="mt-1 text-sm text-[var(--color-muted)]">
+          A simple summary of where your tracking stands.
+        </p>
 
         <div className="mt-4 grid gap-3">
           <StatusRow
@@ -389,11 +616,11 @@ function StatCard({
   href?: string;
 }) {
   const content = (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-5">
       <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
         {title}
       </p>
-      <p className="mt-1 break-words text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+      <p className="mt-2 break-words text-2xl font-semibold leading-tight text-[var(--color-text)]">
         {value}
       </p>
       <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
@@ -431,9 +658,9 @@ function ActionCard({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-3xl sm:p-5"
+      className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 transition hover:-translate-y-0.5 hover:shadow-sm"
     >
-      <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
+      <h3 className="text-base font-semibold text-[var(--color-text)]">
         {title}
       </h3>
       <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
@@ -461,7 +688,7 @@ function StatusRow({
         <span className="text-sm font-medium text-[var(--color-text)]">
           {label}
         </span>
-        <span className="break-words text-sm text-[var(--color-muted)] sm:text-right">
+        <span className="break-words text-sm leading-6 text-[var(--color-muted)] sm:text-right">
           {value}
         </span>
       </div>
