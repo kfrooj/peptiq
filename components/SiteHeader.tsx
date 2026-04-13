@@ -30,6 +30,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
 
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toolsMenuRef = useRef<HTMLDivElement | null>(null);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +38,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
   useEffect(() => {
     setToolsMenuOpen(false);
     setMoreMenuOpen(false);
+    setMobileMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
       if (event.key === "Escape") {
         setToolsMenuOpen(false);
         setMoreMenuOpen(false);
+        setMobileMenuOpen(false);
       }
     }
 
@@ -103,13 +106,14 @@ export default function SiteHeader({ user, isAdmin }: Props) {
 
   const pillBase =
     "rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200";
- const pillInactive = "text-slate-700 hover:bg-slate-100 hover:text-[#2F5E8E]";
-const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
+  const pillInactive =
+    "text-slate-700 hover:bg-slate-100 hover:text-[#2F5E8E]";
+  const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
 
   return (
     <header className="border-b border-slate-200 bg-gradient-to-r from-[#F8FBFF] to-[#EEF5FF] text-[#0F172A]">
       <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-3">
           <Link href="/home" className="shrink-0" aria-label="Go to home">
             <div className="relative h-8 w-[120px] sm:h-9 sm:w-[135px] lg:h-10 lg:w-[150px]">
               <Image
@@ -123,7 +127,7 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
             </div>
           </Link>
 
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <div className="hidden min-w-0 flex-1 items-center justify-end gap-2 md:flex">
             {primaryNav.map((item) => {
               const active = isActivePath(pathname, item.href);
 
@@ -163,7 +167,7 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
                 {toolsMenuOpen ? (
                   <div
                     role="menu"
-                   className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
                   >
                     <div className="p-2">
                       {toolsNav.map((item) => {
@@ -175,10 +179,10 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
                             href={item.href}
                             role="menuitem"
                             className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
-  active
-    ? "bg-[#2F5E8E] text-white"
-    : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
-}`}
+                              active
+                                ? "bg-[#2F5E8E] text-white"
+                                : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                            }`}
                           >
                             {item.label}
                           </Link>
@@ -215,7 +219,7 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
                 {moreMenuOpen ? (
                   <div
                     role="menu"
-                    className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[160px] overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl"
+                    className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[160px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
                   >
                     <div className="p-2">
                       {moreNav.map((item) => {
@@ -227,10 +231,10 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
                             href={item.href}
                             role="menuitem"
                             className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
-  active
-    ? "bg-[#2F5E8E] text-white"
-    : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
-}`}
+                              active
+                                ? "bg-[#2F5E8E] text-white"
+                                : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                            }`}
                           >
                             {item.label}
                           </Link>
@@ -246,7 +250,7 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
               <form action="/auth/signout" method="post" className="ml-1">
                 <button
                   type="submit"
-                  className="rounded-full border border-white/10 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-white/20 hover:bg-white/5 hover:text-[#2F5E8E]"
+                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-[#2F5E8E]"
                 >
                   Logout
                 </button>
@@ -261,16 +265,115 @@ const pillActive = "bg-[#2F5E8E] text-white hover:bg-[#3E73A8]";
                 >
                   Login
                 </Link>
+
                 <Link
-                  href="/signup"
-                  className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#0B0F14] transition hover:opacity-90"
+                  href="/login"
+                  className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8]"
                 >
                   Sign up
                 </Link>
               </>
             )}
           </div>
+
+          <div className="flex items-center gap-2 md:hidden">
+            {!user ? (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/login"
+                  className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8]"
+                >
+                  Sign up
+                </Link>
+              </>
+            ) : (
+              <form action="/auth/signout" method="post">
+                <button
+                  type="submit"
+                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                >
+                  Logout
+                </button>
+              </form>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+            >
+              Menu
+            </button>
+          </div>
         </div>
+
+        {mobileMenuOpen ? (
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:hidden">
+            <div className="grid gap-2">
+              {primaryNav.map((item) => {
+                const active = isActivePath(pathname, item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      active
+                        ? "bg-[#2F5E8E] text-white"
+                        : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              {user
+                ? toolsNav.map((item) => {
+                    const active = isActivePath(pathname, item.href);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          active
+                            ? "bg-[#2F5E8E] text-white"
+                            : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })
+                : null}
+
+              {moreNav.map((item) => {
+                const active = isActivePath(pathname, item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      active
+                        ? "bg-[#2F5E8E] text-white"
+                        : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
     </header>
   );

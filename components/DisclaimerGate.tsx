@@ -11,7 +11,6 @@ const ANONYMOUS_GATED_PUBLIC_PATHS = [
   "/peptides",
   "/calculator",
   "/login",
-  "/signup",
   "/forgot-password",
   "/reset-password",
 ];
@@ -27,10 +26,14 @@ export default function DisclaimerGate() {
 
     const accepted = localStorage.getItem(STORAGE_KEY) === "true";
 
-    if (pathname === "/") {
-      router.replace(accepted ? "/home" : "/disclaimer");
-      return;
-    }
+   if (pathname === "/") {
+  if (accepted) {
+    router.replace("/home");
+  } else {
+    router.replace("/disclaimer");
+  }
+  return;
+}
 
     const isAlwaysAllowed = ALWAYS_ALLOWED_PATHS.some(
       (path) => pathname === path || pathname.startsWith(`${path}/`)

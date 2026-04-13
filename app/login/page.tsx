@@ -63,7 +63,7 @@ export default function LoginPage() {
         if (profile?.role === "admin") {
           router.push("/admin/peptides");
         } else {
-          router.push("/dashboard");
+          router.push("/home");
         }
 
         router.refresh();

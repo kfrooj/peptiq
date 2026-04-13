@@ -44,30 +44,33 @@ export default function DisclaimerPage() {
         // Anonymous visitor
         if (!data.authenticated) {
           if (localAccepted) {
-            router.replace("/home");
-            return;
-          }
+  router.replace("/home");
+  window.scrollTo({ top: 0, behavior: "auto" });
+  return;
+}
 
           setLoading(false);
           return;
         }
 
         // Logged-in user with DB acceptance
-        if (data.accepted) {
-          localStorage.setItem(storageKey, "true");
-          router.replace("/home");
-          return;
-        }
+       if (data.accepted) {
+  localStorage.setItem(storageKey, "true");
+  router.replace("/home");
+  window.scrollTo({ top: 0, behavior: "auto" });
+  return;
+}
 
         // Logged-in user without DB acceptance
         setLoading(false);
       } catch {
         if (!isMounted) return;
 
-        if (localAccepted) {
-          router.replace("/home");
-          return;
-        }
+       if (localAccepted) {
+  router.replace("/home");
+  window.scrollTo({ top: 0, behavior: "auto" });
+  return;
+}
 
         setLoading(false);
       }
@@ -103,8 +106,12 @@ export default function DisclaimerPage() {
       });
 
       router.replace("/home");
+window.scrollTo({ top: 0, behavior: "auto" });
+router.refresh();
     } catch {
       router.replace("/home");
+window.scrollTo({ top: 0, behavior: "auto" });
+router.refresh();
     }
   }
 
