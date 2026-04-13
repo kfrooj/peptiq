@@ -113,9 +113,9 @@ export default function SiteHeader({ user, isAdmin }: Props) {
   return (
     <header className="border-b border-slate-200 bg-gradient-to-r from-[#F8FBFF] to-[#EEF5FF] text-[#0F172A]">
       <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <Link href="/home" className="shrink-0" aria-label="Go to home">
-            <div className="relative h-8 w-[120px] sm:h-9 sm:w-[135px] lg:h-10 lg:w-[150px]">
+            <div className="relative h-8 w-[110px] sm:h-9 sm:w-[135px] lg:h-10 lg:w-[150px]">
               <Image
                 src="/peptiq-logo-dark.png"
                 alt="PEPTIQ"
@@ -278,25 +278,17 @@ export default function SiteHeader({ user, isAdmin }: Props) {
 
           <div className="flex items-center gap-2 md:hidden">
             {!user ? (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/login"
-                  className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8]"
-                >
-                  Sign up
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8] whitespace-nowrap"
+              >
+                Sign up
+              </Link>
             ) : (
               <form action="/auth/signout" method="post">
                 <button
                   type="submit"
-                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 whitespace-nowrap"
                 >
                   Logout
                 </button>
@@ -306,7 +298,9 @@ export default function SiteHeader({ user, isAdmin }: Props) {
             <button
               type="button"
               onClick={() => setMobileMenuOpen((open) => !open)}
-              className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+              className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 whitespace-nowrap"
+              aria-expanded={mobileMenuOpen}
+              aria-haspopup="menu"
             >
               Menu
             </button>
@@ -333,6 +327,19 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                   </Link>
                 );
               })}
+
+              {!user ? (
+                <Link
+                  href="/login"
+                  className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                    isActivePath(pathname, "/login")
+                      ? "bg-[#2F5E8E] text-white"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                  }`}
+                >
+                  Login
+                </Link>
+              ) : null}
 
               {user
                 ? toolsNav.map((item) => {
