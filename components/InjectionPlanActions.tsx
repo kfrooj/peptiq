@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import {
   deleteInjectionPlan,
   toggleInjectionPlanActive,
-} from "@/app/plans/actions";
+} from "@/app/(protected)/plans/actions";
 
 type Props = {
   planId: string;

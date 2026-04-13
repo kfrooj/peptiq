@@ -1,7 +1,7 @@
 "use client";
 
 import FavoriteButton from "@/components/FavoriteButton";
-import { favoriteStack, unfavoriteStack } from "@/app/dashboard/actions";
+import { favoriteStack, unfavoriteStack } from "@/app/(protected)/dashboard/actions";
 
 type Props = {
   stackId: string;

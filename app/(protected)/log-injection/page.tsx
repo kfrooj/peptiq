@@ -33,7 +33,9 @@ type ActivePlan = {
   active: boolean;
 };
 
-function normalizeSingleRelation<T>(value: T | T[] | null | undefined): T | null {
+function normalizeSingleRelation<T>(
+  value: T | T[] | null | undefined
+): T | null {
   if (Array.isArray(value)) {
     return value[0] ?? null;
   }
@@ -73,9 +75,11 @@ function toDateTimeLocalValue(value: string) {
 export default async function LogInjectionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ planId?: string; injectionAt?: string }>;
+  searchParams?: Promise<{ planId?: string; injectionAt?: string }>;
 }) {
-  const { planId = "", injectionAt = "" } = await searchParams;
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const planId = resolvedSearchParams.planId ?? "";
+  const injectionAt = resolvedSearchParams.injectionAt ?? "";
 
   const supabase = await createClient();
 
@@ -140,7 +144,11 @@ export default async function LogInjectionPage({
   const plans = normalizeActivePlans(rawPlans ?? []);
   const logs = normalizeInjectionLogs(rawLogs ?? []);
 
-  const initialPlanId = plans.some((plan) => plan.id === planId) ? planId : "";
+  const selectedPlan = plans.find((plan) => plan.id === planId) ?? null;
+  const lockedToPlan = Boolean(selectedPlan);
+
+  const formPlans = lockedToPlan && selectedPlan ? [selectedPlan] : plans;
+  const initialPlanId = lockedToPlan && selectedPlan ? selectedPlan.id : "";
   const initialInjectionAt = injectionAt ? toDateTimeLocalValue(injectionAt) : "";
 
   return (
@@ -173,9 +181,18 @@ export default async function LogInjectionPage({
             </p>
           </div>
 
+          {lockedToPlan && selectedPlan ? (
+            <div className="mb-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+              <p className="text-sm text-[var(--color-muted)]">Logging for</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">
+                {selectedPlan.plan_name}
+              </p>
+            </div>
+          ) : null}
+
           <NewInjectionLogForm
             peptides={peptides ?? []}
-            plans={plans}
+            plans={formPlans}
             initialPlanId={initialPlanId}
             initialInjectionAt={initialInjectionAt}
           />

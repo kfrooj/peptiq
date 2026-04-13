@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { createInjectionLog } from "@/app/log-injection/actions";
+import { createInjectionLog } from "@/app/(protected)/log-injection/actions";
 
 type Peptide = {
   id: string;
@@ -44,7 +44,6 @@ type Hotspot = {
 };
 
 const HOTSPOTS: Hotspot[] = [
-  // FRONT
   {
     id: "Left upper arm",
     label: "Left arm",
@@ -61,7 +60,6 @@ const HOTSPOTS: Hotspot[] = [
     width: "5.2%",
     height: "9.0%",
   },
-
   {
     id: "Left abdomen",
     label: "Left abdomen",
@@ -78,7 +76,6 @@ const HOTSPOTS: Hotspot[] = [
     width: "6.9%",
     height: "6.1%",
   },
-
   {
     id: "Left thigh",
     label: "Left thigh",
@@ -95,8 +92,6 @@ const HOTSPOTS: Hotspot[] = [
     width: "7.1%",
     height: "12.0%",
   },
-
-  // BACK
   {
     id: "Left upper arm",
     label: "Left arm",
@@ -113,7 +108,6 @@ const HOTSPOTS: Hotspot[] = [
     width: "5.2%",
     height: "9.0%",
   },
-
   {
     id: "Left glute",
     label: "Left glute",
@@ -130,7 +124,6 @@ const HOTSPOTS: Hotspot[] = [
     width: "7.3%",
     height: "6.6%",
   },
-
   {
     id: "Left thigh",
     label: "Left thigh",
@@ -147,17 +140,6 @@ const HOTSPOTS: Hotspot[] = [
     width: "6.9%",
     height: "11.6%",
   },
-];
-
-const UNIQUE_SITES: InjectionSite[] = [
-  "Left upper arm",
-  "Right upper arm",
-  "Left abdomen",
-  "Right abdomen",
-  "Left thigh",
-  "Right thigh",
-  "Left glute",
-  "Right glute",
 ];
 
 export default function NewInjectionLogForm({
@@ -190,6 +172,15 @@ export default function NewInjectionLogForm({
     [plans, planId]
   );
 
+  const lockedToPlan = useMemo(() => {
+    return Boolean(initialPlanId && plans.length === 1 && plans[0]?.id === initialPlanId);
+  }, [initialPlanId, plans]);
+
+  const selectedPeptide = useMemo(
+    () => peptides.find((peptide) => peptide.id === peptideId) ?? null,
+    [peptides, peptideId]
+  );
+
   useEffect(() => {
     if (selectedPlan) {
       setPeptideId(selectedPlan.peptide_id);
@@ -210,10 +201,25 @@ export default function NewInjectionLogForm({
     setMessage("");
     setError("");
 
-    if (!peptideId) return setError("Please select a peptide.");
-    if (!injectionAt) return setError("Please choose an injection date and time.");
-    if (!doseAmount || Number(doseAmount) <= 0) return setError("Please enter a valid dose amount.");
-    if (!site) return setError("Please select an injection site.");
+    if (!peptideId) {
+      setError("Please select a peptide.");
+      return;
+    }
+
+    if (!injectionAt) {
+      setError("Please choose an injection date and time.");
+      return;
+    }
+
+    if (!doseAmount || Number(doseAmount) <= 0) {
+      setError("Please enter a valid dose amount.");
+      return;
+    }
+
+    if (!site) {
+      setError("Please select an injection site.");
+      return;
+    }
 
     startTransition(async () => {
       const result = await createInjectionLog({
@@ -237,37 +243,53 @@ export default function NewInjectionLogForm({
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Plan">
-          <select
-            value={planId}
-            onChange={(e) => setPlanId(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 text-sm"
-          >
-            <option value="">No linked plan</option>
-            {plans.map((plan) => (
-              <option key={plan.id} value={plan.id}>
-                {plan.plan_name}
-              </option>
-            ))}
-          </select>
-        </Field>
+      {lockedToPlan && selectedPlan ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Plan">
+            <div className="w-full rounded-xl border bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text)]">
+              {selectedPlan.plan_name}
+            </div>
+          </Field>
 
-        <Field label="Peptide">
-          <select
-            value={peptideId}
-            onChange={(e) => setPeptideId(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 text-sm"
-          >
-            <option value="">Select a peptide</option>
-            {peptides.map((peptide) => (
-              <option key={peptide.id} value={peptide.id}>
-                {peptide.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
+          <Field label="Peptide">
+            <div className="w-full rounded-xl border bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text)]">
+              {selectedPeptide?.name ?? "Linked peptide"}
+            </div>
+          </Field>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Plan">
+            <select
+              value={planId}
+              onChange={(e) => setPlanId(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+            >
+              <option value="">No linked plan</option>
+              {plans.map((plan) => (
+                <option key={plan.id} value={plan.id}>
+                  {plan.plan_name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Peptide">
+            <select
+              value={peptideId}
+              onChange={(e) => setPeptideId(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+            >
+              <option value="">Select a peptide</option>
+              {peptides.map((peptide) => (
+                <option key={peptide.id} value={peptide.id}>
+                  {peptide.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      )}
 
       <Field label="Injection date and time">
         <input
@@ -304,7 +326,6 @@ export default function NewInjectionLogForm({
         </Field>
       </div>
 
-      {/* BODY MAP */}
       <div className="rounded-3xl border bg-[var(--color-surface-muted)] p-4">
         <div className="mb-4">
           <h3 className="font-semibold">Injection site</h3>
@@ -329,13 +350,20 @@ export default function NewInjectionLogForm({
               return (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => setSite(spot.id)}
                   className={`absolute rounded-[40%] border-2 transition ${
                     active
                       ? "border-red-600 bg-red-500/22 ring-2 ring-red-300"
                       : "border-red-500/80 bg-red-400/10 hover:bg-red-400/18"
                   }`}
-                  style={spot}
+                  style={{
+                    left: spot.left,
+                    top: spot.top,
+                    width: spot.width,
+                    height: spot.height,
+                  }}
+                  aria-label={spot.label}
                 />
               );
             })}
@@ -357,6 +385,7 @@ export default function NewInjectionLogForm({
       </Field>
 
       <button
+        type="button"
         onClick={handleSubmit}
         disabled={isPending}
         className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-white"
@@ -364,8 +393,8 @@ export default function NewInjectionLogForm({
         {isPending ? "Saving..." : "Log injection"}
       </button>
 
-      {message && <div className="text-green-600">{message}</div>}
-      {error && <div className="text-red-600">{error}</div>}
+      {message ? <div className="text-green-600">{message}</div> : null}
+      {error ? <div className="text-red-600">{error}</div> : null}
     </div>
   );
 }

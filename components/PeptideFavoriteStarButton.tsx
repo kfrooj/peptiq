@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import {
   favoritePeptide,
   unfavoritePeptide,
-} from "@/app/dashboard/actions";
+} from "@/app/(protected)/dashboard/actions";
 
 type Props = {
   peptideId: string;

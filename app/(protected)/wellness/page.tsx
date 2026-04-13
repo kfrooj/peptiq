@@ -1,0 +1,172 @@
+import { createClient } from "@/lib/supabase/server";
+
+type InjectionLog = {
+  id: string;
+  injection_at: string;
+  site: string | null;
+  peptide: {
+    name: string;
+  } | null;
+};
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString();
+}
+
+function getLast7Days() {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+  return days;
+}
+
+export default async function WellnessPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: logs } = await supabase
+    .from("injection_logs")
+    .select(
+      `
+      id,
+      injection_at,
+      site,
+      peptide:peptides(name)
+    `
+    )
+    .eq("user_id", user!.id)
+    .order("injection_at", { ascending: false });
+
+  const typedLogs: InjectionLog[] = (logs ?? []).map((l: any) => ({
+    id: l.id,
+    injection_at: l.injection_at,
+    site: l.site ?? null,
+    peptide: Array.isArray(l.peptide)
+      ? l.peptide[0] ?? null
+      : l.peptide ?? null,
+  }));
+
+  // ---- Stats ----
+  const total = typedLogs.length;
+
+  const last = typedLogs[0]
+    ? formatDate(typedLogs[0].injection_at)
+    : "—";
+
+  const peptideCounts = typedLogs.reduce<Record<string, number>>((acc, log) => {
+    const name = log.peptide?.name || "Unknown";
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  const topPeptide =
+    Object.entries(peptideCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+
+  // ---- 7 day activity ----
+  const last7 = getLast7Days();
+
+  const activity = last7.map((day) => {
+    const count = typedLogs.filter((log) => {
+      const d = new Date(log.injection_at);
+      return d.toDateString() === day.toDateString();
+    }).length;
+
+    return {
+      label: day.toLocaleDateString(undefined, { weekday: "short" }),
+      count,
+    };
+  });
+
+  const max = Math.max(...activity.map((a) => a.count), 1);
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-6">
+      {/* Header */}
+      <section className="mb-6">
+        <h1 className="text-3xl font-bold text-[var(--color-text)]">
+          Wellness Tracker
+        </h1>
+        <p className="mt-2 text-sm text-[var(--color-muted)]">
+          Review your injection history and activity patterns.
+        </p>
+      </section>
+
+      {/* Stats */}
+      <section className="mb-6 grid gap-4 sm:grid-cols-3">
+        <Card title="Total injections" value={String(total)} />
+        <Card title="Last injection" value={last} />
+        <Card title="Top peptide" value={topPeptide} />
+      </section>
+
+      {/* Activity */}
+      <section className="mb-6 rounded-2xl border p-4">
+        <h2 className="text-lg font-semibold">Last 7 Days</h2>
+
+        <div className="mt-4 grid grid-cols-7 gap-4">
+          {activity.map((day) => (
+            <div key={day.label} className="flex flex-col items-center">
+              <div className="text-xs mb-1">{day.count}</div>
+              <div className="h-24 flex items-end">
+                <div
+                  className="w-6 bg-blue-500 rounded-t"
+                  style={{
+                    height: `${(day.count / max) * 100}%`,
+                  }}
+                />
+              </div>
+              <div className="text-xs mt-1">{day.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Logs */}
+      <section className="rounded-2xl border p-4">
+        <h2 className="text-lg font-semibold">Recent Injections</h2>
+
+        <div className="mt-4 space-y-3">
+          {!typedLogs.length ? (
+            <p className="text-sm text-[var(--color-muted)]">
+              No injections logged yet.
+            </p>
+          ) : (
+            typedLogs.slice(0, 10).map((log) => (
+              <div
+                key={log.id}
+                className="rounded-xl border p-3 flex justify-between"
+              >
+                <div>
+                  <p className="font-medium">
+                    {log.peptide?.name || "Injection"}
+                  </p>
+                  <p className="text-sm text-[var(--color-muted)]">
+                    {log.site || "No site"}
+                  </p>
+                </div>
+
+                <p className="text-sm text-[var(--color-muted)]">
+                  {formatDate(log.injection_at)}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function Card({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl border p-4">
+      <p className="text-xs text-[var(--color-muted)]">{title}</p>
+      <p className="text-xl font-semibold mt-2">{value}</p>
+    </div>
+  );
+}

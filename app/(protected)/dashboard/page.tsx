@@ -36,6 +36,7 @@ type PlanRow = {
 type ProfileRow = {
   id: string;
   name: string | null;
+  disclaimer_accepted?: boolean | null;
 };
 
 function formatLocalDate(value: string | Date) {
@@ -90,7 +91,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, name")
+      .select("id, name, disclaimer_accepted")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -142,6 +143,11 @@ export default async function DashboardPage() {
   if (remindersError) throw new Error(remindersError.message);
 
   const profileData = profile as ProfileRow | null;
+
+  if (!profileData?.disclaimer_accepted) {
+    redirect("/disclaimer");
+  }
+
   const displayName =
     profileData?.name?.trim() || user.email?.split("@")[0] || "there";
 

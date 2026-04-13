@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { saveStack } from "@/app/stacks/actions";
+import { saveStack } from "@/app/(protected)/stacks/actions";
 import PeptideFavoriteStarButton from "@/components/PeptideFavoriteStarButton";
 
 type Peptide = {

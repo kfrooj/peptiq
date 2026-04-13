@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createUserNote } from "@/app/dashboard/actions";
+import { createUserNote } from "@/app/(protected)/dashboard/actions";
 
 export default function NewNoteForm() {
   const [title, setTitle] = useState("");

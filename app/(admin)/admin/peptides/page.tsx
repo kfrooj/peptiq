@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminPeptideFilters from "@/components/AdminPeptideFilters";
 
+
 const PAGE_SIZE = 10;
 
 type SearchParams = Promise<{

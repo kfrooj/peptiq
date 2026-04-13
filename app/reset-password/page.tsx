@@ -33,9 +33,7 @@ export default function ResetPasswordPage() {
       }
 
       if (!session) {
-        setErrorMessage(
-          "Your reset link has expired or is invalid."
-        );
+        setErrorMessage("Your reset link has expired or is invalid.");
         setLoadingSession(false);
         return;
       }
@@ -71,7 +69,10 @@ export default function ResetPasswordPage() {
 
     setSaving(true);
 
-    const { error } = await supabase.auth.updateUser({
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.updateUser({
       password,
     });
 
@@ -81,13 +82,29 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    setMessage("Password updated successfully. Redirecting...");
+    if (user?.email) {
+      try {
+        await fetch("/api/email/password-changed", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: user.email,
+          }),
+        });
+      } catch (emailError) {
+        console.error("Password reset email trigger error:", emailError);
+      }
+    }
+
+    setMessage("Password updated successfully. Redirecting to home...");
     setPassword("");
     setConfirmPassword("");
     setSaving(false);
 
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push("/");
       router.refresh();
     }, 1500);
   }
@@ -161,9 +178,7 @@ export default function ResetPasswordPage() {
             </div>
           )}
 
-          {message && (
-            <p className="text-sm text-green-600">{message}</p>
-          )}
+          {message && <p className="text-sm text-green-600">{message}</p>}
 
           <button
             type="submit"

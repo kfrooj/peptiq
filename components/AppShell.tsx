@@ -16,23 +16,28 @@ type Props = {
   children: React.ReactNode;
 };
 
+const SHELL_EXCLUDED_PATHS = ["/disclaimer"];
+
 export default function AppShell({ user, isAdmin, children }: Props) {
   const pathname = usePathname();
 
-  const isDisclaimerRoute =
-    pathname === "/disclaimer" || pathname.startsWith("/disclaimer/");
+  const isShellExcludedRoute = SHELL_EXCLUDED_PATHS.some(
+    (excludedPath) =>
+      pathname === excludedPath || pathname.startsWith(`${excludedPath}/`)
+  );
 
-  const hideHeader = isDisclaimerRoute;
-  const removeBottomNavPadding = isDisclaimerRoute;
+  if (isShellExcludedRoute) {
+    return <>{children}</>;
+  }
 
   return (
     <>
       <DisclaimerGate />
-      {!isDisclaimerRoute ? <AppSplashScreen /> : null}
-      {!hideHeader ? <SiteHeader user={user} isAdmin={isAdmin} /> : null}
-      <main className={removeBottomNavPadding ? "flex-1" : "flex-1 pb-24 md:pb-0"}>
-        {children}
-      </main>
+      <AppSplashScreen />
+      <div className="min-h-screen bg-[var(--color-background)]">
+        <SiteHeader user={user} isAdmin={isAdmin} />
+        <main>{children}</main>
+      </div>
     </>
   );
 }

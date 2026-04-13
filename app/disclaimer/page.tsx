@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -28,21 +27,57 @@ export default function DisclaimerPage() {
     checkedResponsibleUse;
 
   useEffect(() => {
-    const accepted = localStorage.getItem(storageKey) === "true";
+    let isMounted = true;
 
-    if (!accepted) {
-      setLoading(false);
-      return;
+    async function checkStatus() {
+      const localAccepted = localStorage.getItem(storageKey) === "true";
+
+      try {
+        const res = await fetch("/api/disclaimer/status", {
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (!isMounted) return;
+
+        // Anonymous visitor
+        if (!data.authenticated) {
+          if (localAccepted) {
+            router.replace("/home");
+            return;
+          }
+
+          setLoading(false);
+          return;
+        }
+
+        // Logged-in user with DB acceptance
+        if (data.accepted) {
+          localStorage.setItem(storageKey, "true");
+          router.replace("/home");
+          return;
+        }
+
+        // Logged-in user without DB acceptance
+        setLoading(false);
+      } catch {
+        if (!isMounted) return;
+
+        if (localAccepted) {
+          router.replace("/home");
+          return;
+        }
+
+        setLoading(false);
+      }
     }
 
-    fetch("/api/auth/session-check", { cache: "no-store" })
-      .then(async (res) => {
-        const data = await res.json();
-        router.replace(data.authenticated ? "/dashboard" : "/login");
-      })
-      .catch(() => {
-        router.replace("/login");
-      });
+    checkStatus();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router, storageKey]);
 
   async function handleContinue() {
@@ -53,23 +88,64 @@ export default function DisclaimerPage() {
 
     setError("");
     setIsSubmitting(true);
+
     localStorage.setItem(storageKey, "true");
 
     try {
-      const res = await fetch("/api/auth/session-check", {
-        cache: "no-store",
+      await fetch("/api/disclaimer/accept", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          version: DISCLAIMER_VERSION,
+        }),
       });
 
-      const data = await res.json();
-      router.replace(data.authenticated ? "/dashboard" : "/login");
+      router.replace("/home");
     } catch {
-      router.replace("/login");
+      router.replace("/home");
     }
   }
 
-  if (loading) {
-    return null;
+  function handleExit() {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.replace("/home");
   }
+
+ if (loading) {
+  return (
+   <main className="page-fade-in min-h-screen bg-gradient-to-b from-white to-[var(--color-surface-muted)] px-4 py-10">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center text-center">
+        <div className="relative h-16 w-16">
+          <Image
+            src="/peptiq-logo.png"
+            alt="PEPTIQ logo"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+
+        <h1 className="mt-4 text-2xl font-bold tracking-tight text-[var(--color-text)]">
+          PEPTIQ
+        </h1>
+
+        <p className="mt-2 text-sm text-[var(--color-muted)]">
+          Checking access…
+        </p>
+
+        <div className="mt-6 h-1.5 w-40 overflow-hidden rounded-full bg-[var(--color-border)]">
+          <div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--color-accent)]" />
+        </div>
+      </div>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[var(--color-surface-muted)] px-4 py-10">
@@ -155,23 +231,30 @@ export default function DisclaimerPage() {
           ) : null}
 
           <button
-            onClick={handleContinue}
-            disabled={!canContinue || isSubmitting}
-            className={`mt-6 w-full rounded-xl py-3 text-sm font-medium text-white transition ${
-              canContinue && !isSubmitting
-                ? "bg-[var(--color-accent)] hover:opacity-90"
-                : "bg-gray-400"
-            }`}
-          >
-            {isSubmitting ? "Continuing..." : "I understand"}
-          </button>
+  onClick={handleContinue}
+  disabled={!canContinue || isSubmitting}
+  className={`mt-6 w-full rounded-xl py-3 text-sm font-medium text-white transition ${
+    canContinue && !isSubmitting
+      ? "bg-[var(--color-accent)] hover:opacity-90"
+      : "bg-gray-400"
+  }`}
+>
+  {isSubmitting ? "Saving and continuing..." : "I understand"}
+</button>
 
-          <Link
-            href="/"
-            className="mt-3 block text-center text-sm text-[var(--color-muted)] underline"
+<p className="mt-3 text-center text-xs text-[var(--color-muted)]">
+  {isSubmitting
+    ? "Saving your acknowledgement…"
+    : "You’ll only need to do this again if the disclaimer changes."}
+</p>
+
+          <button
+            type="button"
+            onClick={handleExit}
+            className="mt-3 block w-full text-center text-sm text-[var(--color-muted)] underline"
           >
             Exit
-          </Link>
+          </button>
 
           <p className="mt-4 text-center text-xs text-[var(--color-muted)]">
             Version {DISCLAIMER_VERSION}

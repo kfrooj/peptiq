@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createInjectionPlan } from "@/app/plans/actions";
+import { createInjectionPlan } from "@/app/(protected)/plans/actions";
 
 type Peptide = {
   id: string;

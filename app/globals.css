@@ -11,6 +11,15 @@
   --color-muted: #64748b;
 }
 
+:root {
+  --color-brand-900: #0b0f14;
+  --color-brand-800: #132033;
+  --color-brand-700: #1b314c;
+  --color-brand-600: #234261;
+  --color-brand-accent: #2f5e8e;
+  --color-brand-accent-soft: #3e73a8;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -28,4 +37,45 @@
 body {
   background: var(--color-background);
   color: var(--color-text);
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-fade-in {
+  animation: pageFadeIn 0.24s ease-out;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.min-h-screen-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
 }

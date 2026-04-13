@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteInjectionLog } from "@/app/log-injection/actions";
+import { deleteInjectionLog } from "@/app/(protected)/log-injection/actions";
 
 type Props = {
   logId: string;
