@@ -233,13 +233,13 @@ export default async function TodayCardSection({
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <Link
-                  href={`/plans/${nextDuePlan.id}`}
-                  className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
-                >
-                  <p className="text-lg font-semibold text-[var(--color-text)]">
-                    {nextDuePlan.planName}
-                  </p>
-                </Link>
+  href="/plans"
+  className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
+>
+  <p className="text-lg font-semibold text-[var(--color-text)]">
+    {nextDuePlan.planName}
+  </p>
+</Link>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">
                   {nextDuePlan.doseAmount && nextDuePlan.doseUnit
                     ? `${nextDuePlan.doseAmount}${nextDuePlan.doseUnit} · `

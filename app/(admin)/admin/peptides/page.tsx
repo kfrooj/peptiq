@@ -123,9 +123,6 @@ export default async function AdminPeptidesPage({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <AdminLogoutButton />
-        </div>
       </div>
 
       <section className="mb-8 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
