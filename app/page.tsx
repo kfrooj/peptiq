@@ -12,15 +12,22 @@ export default function IndexPage() {
 
   useEffect(() => {
     const accepted = localStorage.getItem(STORAGE_KEY) === "true";
-    router.replace(accepted ? "/home" : "/disclaimer");
+
+    window.scrollTo({ top: 0, behavior: "auto" });
+
+    if (accepted) {
+      router.replace("/home");
+    } else {
+      router.replace("/disclaimer");
+    }
   }, [router]);
 
   return (
-   <main className="page-fade-in min-h-screen bg-[var(--color-background)]">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center text-center">
+    <main className="page-fade-in min-h-screen bg-[var(--color-background)]">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 text-center">
         <div className="relative h-16 w-16">
           <Image
-            src="/peptiq-logo.png"
+            src="/peptiq-logo-dark.png"
             alt="PEPTIQ logo"
             fill
             className="object-contain"

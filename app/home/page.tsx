@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
 type InjectionPlanRow = {
@@ -202,45 +201,12 @@ export default async function HomePage() {
 
   const primaryHref = user ? "/log-injection" : "/login";
   const primaryLabel = user ? "Log Injection" : "Get Started";
-  const secondaryAuthHref = user ? "/dashboard" : "/login";
-  const secondaryAuthLabel = user ? "Dashboard" : "Login";
 
   const todayData = user ? await getTodayCardData(user.id) : null;
 
   return (
     <main className="page-fade-in min-h-screen bg-[var(--color-background)]">
       <section className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-10">
-        <div className="mb-8 flex items-center justify-between gap-4 md:hidden">
-          <Link href="/home" className="shrink-0" aria-label="Go to home">
-            <Image
-              src="/peptiq-logo.png"
-              alt="PEPTIQ"
-              width={180}
-              height={44}
-              priority
-              className="h-8 w-auto"
-            />
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href={secondaryAuthHref}
-              className="rounded-full border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
-            >
-              {secondaryAuthLabel}
-            </Link>
-
-            {!user ? (
-              <Link
-                href="/signup"
-                className="rounded-full bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
-              >
-                Sign up
-              </Link>
-            ) : null}
-          </div>
-        </div>
-
         <div className="space-y-8">
           {todayData ? <TodayCard {...todayData} /> : null}
 
@@ -379,14 +345,14 @@ function TodayCard({
             <p className="text-sm text-[var(--color-muted)]">Next due</p>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-               <Link
-  href={`/plans/${nextDuePlan.id}`}
-  className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
->
-  <p className="text-lg font-semibold text-[var(--color-text)]">
-    {nextDuePlan.planName}
-  </p>
-</Link>
+                <Link
+                  href={`/plans/${nextDuePlan.id}`}
+                  className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
+                >
+                  <p className="text-lg font-semibold text-[var(--color-text)]">
+                    {nextDuePlan.planName}
+                  </p>
+                </Link>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">
                   {nextDuePlan.doseAmount && nextDuePlan.doseUnit
                     ? `${nextDuePlan.doseAmount}${nextDuePlan.doseUnit} · `
@@ -396,7 +362,7 @@ function TodayCard({
               </div>
 
               <Link
-  href={`/log-injection?planId=${nextDuePlan.id}`}
+                href={`/log-injection?planId=${nextDuePlan.id}`}
                 className="inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90"
               >
                 Log Now
