@@ -1,6 +1,7 @@
-
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getEffectivePlanTierForUser } from "@/lib/billing/getEffectivePlanTier";
 import NewInjectionPlanForm from "@/components/NewInjectionPlanForm";
 import InjectionPlanActions from "@/components/InjectionPlanActions";
 import PlanAdherenceSparkline from "@/components/PlanAdherenceSparkline";
@@ -52,13 +53,15 @@ type ReminderDetail = {
   completed: boolean;
 };
 
+type BillingProfile = {
+  plan_tier?: string | null;
+  subscription_status?: string | null;
+};
+
 function normalizeSingleRelation<T>(
   value: T | T[] | null | undefined
 ): T | null {
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
-
+  if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
 }
 
@@ -110,10 +113,10 @@ function getAdherenceStyles(adherence: number) {
 }
 
 function formatLocalDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function getLast60Days() {
@@ -133,8 +136,8 @@ function getLast60Days() {
 
   for (let i = 59; i >= 0; i--) {
     const date = new Date(today);
-    date.setHours(0, 0, 0, 0);
     date.setDate(today.getDate() - i);
+    date.setHours(0, 0, 0, 0);
 
     days.push({
       key: formatLocalDateKey(date),
@@ -147,26 +150,20 @@ function getLast60Days() {
 }
 
 function getTrendSummary(points: TrendPoint[]) {
-  const daysWithData = points.filter((point) => point.total > 0);
+  const valid = points.filter((p) => p.total > 0);
 
-  if (daysWithData.length < 2) {
-    return "Not enough data yet";
-  }
+  if (valid.length < 2) return "Not enough data yet";
 
-  const recent = daysWithData.slice(-7);
-  const earlier = daysWithData.slice(-14, -7);
+  const recent = valid.slice(-7);
+  const earlier = valid.slice(-14, -7);
 
-  if (!recent.length || !earlier.length) {
-    return "Building trend";
-  }
+  if (!recent.length || !earlier.length) return "Building trend";
 
-  const recentAvg =
-    recent.reduce((sum, point) => sum + point.adherence, 0) / recent.length;
-  const earlierAvg =
-    earlier.reduce((sum, point) => sum + point.adherence, 0) / earlier.length;
+  const avg = (arr: TrendPoint[]) =>
+    arr.reduce((sum, point) => sum + point.adherence, 0) / arr.length;
 
-  if (recentAvg >= earlierAvg + 10) return "Improving";
-  if (recentAvg <= earlierAvg - 10) return "Needs attention";
+  if (avg(recent) >= avg(earlier) + 10) return "Improving";
+  if (avg(recent) <= avg(earlier) - 10) return "Needs attention";
   return "Stable";
 }
 
@@ -177,6 +174,25 @@ function formatTimeLabel(value: string) {
   });
 }
 
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatFrequencyLabel(
+  frequencyType: string,
+  frequencyValue: number | null
+) {
+  if (frequencyType === "every_x_days" && frequencyValue) {
+    return `Every ${frequencyValue} days`;
+  }
+
+  return frequencyType.replaceAll("_", " ");
+}
+
 export default async function PlansContent() {
   const supabase = await createClient();
 
@@ -184,65 +200,72 @@ export default async function PlansContent() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
   sixtyDaysAgo.setHours(0, 0, 0, 0);
 
-  const { data: peptides, error: peptidesError } = await supabase
-    .from("peptides")
-    .select("id, name, category")
-    .eq("published", true)
-    .order("name", { ascending: true });
-
-  if (peptidesError) {
-    throw new Error(peptidesError.message);
-  }
-
-  const { data: rawPlans, error: plansError } = await supabase
-    .from("injection_plans")
-    .select(
-      `
-        id,
-        plan_name,
-        dose_amount,
-        dose_unit,
-        frequency_type,
-        frequency_value,
-        start_date,
-        end_date,
-        default_time,
-        active,
-        reminders_enabled,
-        reminder_offset_hours,
-        notes,
-        created_at,
-        peptide:peptides (
+  const [
+    { data: profileData, error: profileError },
+    { data: peptides, error: peptidesError },
+    { data: rawPlans, error: plansError },
+    { data: adherenceData, error: adherenceError },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("plan_tier, subscription_status")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("peptides")
+      .select("id, name, category")
+      .eq("published", true)
+      .order("name", { ascending: true }),
+    supabase
+      .from("injection_plans")
+      .select(
+        `
           id,
-          name,
-          category
-        )
-      `
-    )
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+          plan_name,
+          dose_amount,
+          dose_unit,
+          frequency_type,
+          frequency_value,
+          start_date,
+          end_date,
+          default_time,
+          active,
+          reminders_enabled,
+          reminder_offset_hours,
+          notes,
+          created_at,
+          peptide:peptides (
+            id,
+            name,
+            category
+          )
+        `
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("plan_reminders")
+      .select("id, plan_id, is_completed, reminder_for")
+      .eq("user_id", user.id)
+      .gte("reminder_for", sixtyDaysAgo.toISOString()),
+  ]);
 
-  if (plansError) {
-    throw new Error(plansError.message);
-  }
+  if (profileError) throw new Error(profileError.message);
+  if (peptidesError) throw new Error(peptidesError.message);
+  if (plansError) throw new Error(plansError.message);
+  if (adherenceError) throw new Error(adherenceError.message);
 
-  const { data: adherenceData, error: adherenceError } = await supabase
-    .from("plan_reminders")
-    .select("id, plan_id, is_completed, reminder_for")
-    .eq("user_id", user.id)
-    .gte("reminder_for", sixtyDaysAgo.toISOString());
-
-  if (adherenceError) {
-    throw new Error(adherenceError.message);
-  }
+  const planTier = getEffectivePlanTierForUser(
+    user.email,
+    (profileData ?? undefined) as BillingProfile | undefined
+  );
+  const maxPlans = planTier === "pro" ? null : 2;
 
   const reminderRows: ReminderRow[] = (adherenceData ?? []).map((row: any) => ({
     id: row.id,
@@ -280,15 +303,14 @@ export default async function PlansContent() {
   const last60Days = getLast60Days();
 
   const trendMap: Record<string, TrendPoint[]> = {};
-  const reminderDetailsMap: Record<string, Record<string, ReminderDetail[]>> = {};
+  const reminderDetailsMap: Record<string, Record<string, ReminderDetail[]>> =
+    {};
 
   for (const reminder of reminderRows) {
     const planId = reminder.plan_id;
     if (!planId) continue;
 
-    const reminderDate = new Date(reminder.reminder_for);
-    const dayKey = formatLocalDateKey(reminderDate);
-
+    const dayKey = formatLocalDateKey(new Date(reminder.reminder_for));
     const matchingDay = last60Days.find((day) => day.key === dayKey);
     if (!matchingDay) continue;
 
@@ -336,33 +358,111 @@ export default async function PlansContent() {
   }
 
   const plans = normalizeInjectionPlans(rawPlans ?? []);
+  const activePlans = plans.filter((p) => p.active);
+  const activePlanCount = activePlans.length;
+  const isAtLimit = maxPlans !== null && activePlanCount >= maxPlans;
+  const isNearLimit = maxPlans !== null && activePlanCount === maxPlans - 1;
+  const showUsageBanner = planTier === "free";
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text)] sm:text-3xl">
-          Injection Plans
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Create and manage your peptide injection plans.
-        </p>
+    <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mb-5 sm:mb-7">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)] sm:text-3xl">
+              Injection Plans
+            </h1>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Manage active plans, track adherence, and keep your next step clear.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start">
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                planTier === "pro"
+                  ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {planTier === "pro" ? "Pro" : "Free"}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr] lg:gap-6">
+      {showUsageBanner ? (
+        <section className="mb-4 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text)]">
+                Using {activePlanCount} of {maxPlans} active plans
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                {isAtLimit
+                  ? "You’ve hit the Free plan limit. Upgrade to Pro for unlimited active plans, or archive an existing plan first."
+                  : isNearLimit
+                    ? "You’re close to the Free plan limit. Upgrade to Pro for unlimited active plans."
+                    : "Free includes up to 2 active plans. Upgrade to Pro for unlimited active plans and fuller tracking."}
+              </p>
+            </div>
+
+            <Link
+              href="/pricing"
+              className="inline-flex min-h-10 items-center justify-center rounded-full bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Upgrade
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr] lg:gap-6">
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-            Create New Plan
-          </h2>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+                Create New Plan
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Set up a new schedule and reminder pattern.
+              </p>
+            </div>
+          </div>
 
           <div className="mt-4">
-            <NewInjectionPlanForm peptides={peptides ?? []} />
+            <NewInjectionPlanForm
+              peptides={peptides ?? []}
+              disabled={isAtLimit}
+              disabledReason="Free includes up to 2 active plans. Upgrade to Pro for unlimited plans, or archive an existing plan first."
+              upgradeHref="/pricing"
+            />
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-          <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-            Your Plans
-          </h2>
+        <section
+          id="your-plans"
+          className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+                Your Plans
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Scan active plans quickly and drill into adherence where needed.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
+                {plans.length} total
+              </span>
+              <span className="rounded-full bg-green-50 px-2.5 py-1 text-green-700">
+                {activePlanCount} active
+              </span>
+            </div>
+          </div>
 
           <div className="mt-4 grid gap-4">
             {!plans.length ? (
@@ -397,114 +497,149 @@ export default async function PlansContent() {
                 const reminderDetailsByDay = reminderDetailsMap[plan.id] || {};
 
                 return (
-                  <div
+                  <article
                     key={plan.id}
                     className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5"
                   >
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
-                          {plan.plan_name}
-                        </h3>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-semibold text-[var(--color-text)] sm:text-lg">
+                            {plan.plan_name}
+                          </h3>
+                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                            {plan.peptide?.name || "Unknown peptide"}
+                          </p>
+                        </div>
 
-                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                          Peptide: {plan.peptide?.name || "Unknown peptide"}
-                        </p>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                              plan.active
+                                ? "bg-green-50 text-green-700"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {plan.active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </div>
 
-                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                          Dose: {plan.dose_amount} {plan.dose_unit}
-                        </p>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-[var(--color-muted)] sm:grid-cols-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                            Dose
+                          </p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text)]">
+                            {plan.dose_amount} {plan.dose_unit}
+                          </p>
+                        </div>
 
-                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                          Frequency:{" "}
-                          {plan.frequency_type === "every_x_days" &&
-                          plan.frequency_value
-                            ? `Every ${plan.frequency_value} days`
-                            : plan.frequency_type}
-                        </p>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                            Frequency
+                          </p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text)]">
+                            {formatFrequencyLabel(
+                              plan.frequency_type,
+                              plan.frequency_value
+                            )}
+                          </p>
+                        </div>
 
-                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                          Start: {plan.start_date}
-                        </p>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                            Start
+                          </p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text)]">
+                            {formatDate(plan.start_date)}
+                          </p>
+                        </div>
 
                         {plan.end_date ? (
-                          <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                            End: {plan.end_date}
-                          </p>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                              End
+                            </p>
+                            <p className="mt-0.5 text-sm text-[var(--color-text)]">
+                              {formatDate(plan.end_date)}
+                            </p>
+                          </div>
                         ) : null}
 
                         {plan.default_time ? (
-                          <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                            Injection time: {plan.default_time}
-                          </p>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                              Time
+                            </p>
+                            <p className="mt-0.5 text-sm text-[var(--color-text)]">
+                              {plan.default_time}
+                            </p>
+                          </div>
                         ) : null}
 
-                        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                          Reminders:{" "}
-                          {plan.reminders_enabled
-                            ? `Enabled (${plan.reminder_offset_hours ?? 24}h before)`
-                            : "Disabled"}
-                        </p>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                            Reminders
+                          </p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text)]">
+                            {plan.reminders_enabled
+                              ? `${plan.reminder_offset_hours ?? 24}h before`
+                              : "Off"}
+                          </p>
+                        </div>
+                      </div>
 
+                      <div className="flex flex-wrap items-center gap-2">
                         <div
-                          className={`mt-3 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
+                          className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
                         >
                           <span>60-day adherence</span>
                           <span>{adherence}%</span>
                         </div>
 
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                          <span className="rounded-full bg-green-50 px-2 py-1 text-green-700">
-                            {stats.completed} completed
-                          </span>
-                          <span className="rounded-full bg-red-50 px-2 py-1 text-red-700">
-                            {stats.missed} missed
-                          </span>
-                          <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">
-                            {stats.total} total
-                          </span>
-                        </div>
-
-                        <div className="mt-4">
-                          <PlanAdherenceSparkline
-                            points={trend}
-                            lineColor={adherenceStyles.line}
-                            trendSummary={trendSummary}
-                            trendLabel="60-DAY TREND"
-                            reminderDetailsByDay={reminderDetailsByDay}
-                            defaultDetailsOpen={false}
-                          />
-
-                          <p className="mt-2 text-xs text-[var(--color-muted)]">
-                            Based on the last 60 days of reminders.
-                          </p>
-                        </div>
-
-                        {plan.notes ? (
-                          <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
-                            Notes: {plan.notes}
-                          </p>
-                        ) : null}
+                        <span className="rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
+                          {stats.completed} completed
+                        </span>
+                        <span className="rounded-full bg-red-50 px-2 py-1 text-xs text-red-700">
+                          {stats.missed} missed
+                        </span>
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                          {stats.total} total
+                        </span>
                       </div>
 
-                      <div className="flex flex-row items-center justify-between gap-3 lg:flex-col lg:items-end">
-                        <span
-                          className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium ${
-                            plan.active
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {plan.active ? "Active" : "Inactive"}
-                        </span>
+                      <div>
+                        <PlanAdherenceSparkline
+                          points={trend}
+                          lineColor={adherenceStyles.line}
+                          trendSummary={trendSummary}
+                          trendLabel="60-DAY TREND"
+                          reminderDetailsByDay={reminderDetailsByDay}
+                          defaultDetailsOpen={false}
+                        />
+                        <p className="mt-2 text-xs text-[var(--color-muted)]">
+                          Based on the last 60 days of reminders.
+                        </p>
+                      </div>
 
+                      {plan.notes ? (
+                        <div className="rounded-xl bg-white/70 px-3 py-2 text-sm text-[var(--color-muted)]">
+                          <span className="font-medium text-[var(--color-text)]">
+                            Notes:
+                          </span>{" "}
+                          {plan.notes}
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-center justify-end">
                         <InjectionPlanActions
                           planId={plan.id}
                           active={plan.active}
                         />
                       </div>
                     </div>
-                  </div>
+                  </article>
                 );
               })
             )}

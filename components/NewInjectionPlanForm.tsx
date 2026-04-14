@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { createInjectionPlan } from "@/app/(protected)/plans/actions";
 
@@ -11,9 +12,17 @@ type Peptide = {
 
 type Props = {
   peptides: Peptide[];
+  disabled?: boolean;
+  disabledReason?: string;
+  upgradeHref?: string;
 };
 
-export default function NewInjectionPlanForm({ peptides }: Props) {
+export default function NewInjectionPlanForm({
+  peptides,
+  disabled = false,
+  disabledReason,
+  upgradeHref = "/pricing",
+}: Props) {
   const [peptideId, setPeptideId] = useState("");
   const [planName, setPlanName] = useState("");
   const [doseAmount, setDoseAmount] = useState("");
@@ -30,6 +39,9 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const isFormLocked = disabled;
+  const isSubmitDisabled = isPending || isFormLocked;
 
   function resetForm() {
     setPeptideId("");
@@ -48,6 +60,15 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
   }
 
   function handleSubmit() {
+    if (isFormLocked) {
+      setMessage("");
+      setError(
+        disabledReason ||
+          "Upgrade required to create another active plan."
+      );
+      return;
+    }
+
     setMessage("");
     setError("");
 
@@ -72,7 +93,7 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
     }
 
     if (!defaultTime) {
-      setError("Please choose a default reminder time.");
+      setError("Please choose an injection time.");
       return;
     }
 
@@ -84,7 +105,10 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
       return;
     }
 
-    if (!reminderOffsetHours || Number(reminderOffsetHours) < 1) {
+    if (
+      remindersEnabled &&
+      (!reminderOffsetHours || Number(reminderOffsetHours) < 1)
+    ) {
       setError("Please enter a valid reminder offset.");
       return;
     }
@@ -106,227 +130,270 @@ export default function NewInjectionPlanForm({ peptides }: Props) {
         active,
         remindersEnabled,
         reminderOffsetHours: Number(reminderOffsetHours),
-        notes: notes || null,
+        notes: notes.trim() || null,
       });
 
       if (result.success) {
         setMessage("Plan created successfully.");
+        setError("");
         resetForm();
       } else {
         setError(result.error || "Could not create plan.");
+        setMessage("");
       }
     });
   }
 
   return (
     <div className="grid gap-4">
-      <div>
-        <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Peptide
-        </label>
-        <select
-          value={peptideId}
-          onChange={(e) => setPeptideId(e.target.value)}
-          className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-        >
-          <option value="">Select a peptide</option>
-          {peptides.map((peptide) => (
-            <option key={peptide.id} value={peptide.id}>
-              {peptide.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {isFormLocked ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                Upgrade to create more plans
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                {disabledReason ||
+                  "Free includes up to 2 active plans. Upgrade to Pro for unlimited plans, or archive an existing one first."}
+              </p>
+            </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Plan name
-        </label>
-        <input
-          type="text"
-          value={planName}
-          onChange={(e) => setPlanName(e.target.value)}
-          placeholder="Example: Morning Recovery Plan"
-          className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-        />
-      </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                href={upgradeHref}
+                className="inline-flex min-h-10 items-center justify-center rounded-full bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Upgrade to Pro
+              </Link>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+              <a
+                href="#your-plans"
+                className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)]"
+              >
+                Review plans
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <fieldset
+        disabled={isFormLocked}
+        className={`grid gap-4 ${isFormLocked ? "opacity-60" : ""}`}
+      >
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-            Dose amount
+          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Peptide
+          </label>
+          <select
+            value={peptideId}
+            onChange={(e) => setPeptideId(e.target.value)}
+            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+          >
+            <option value="">Select a peptide</option>
+            {peptides.map((peptide) => (
+              <option key={peptide.id} value={peptide.id}>
+                {peptide.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Plan name
           </label>
           <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={doseAmount}
-            onChange={(e) => setDoseAmount(e.target.value)}
-            placeholder="Example: 250"
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+            type="text"
+            value={planName}
+            onChange={(e) => setPlanName(e.target.value)}
+            placeholder="Morning Recovery Plan"
+            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
           />
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-            Dose unit
-          </label>
-          <select
-            value={doseUnit}
-            onChange={(e) => setDoseUnit(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-          >
-            <option value="mcg">mcg</option>
-            <option value="mg">mg</option>
-            <option value="IU">IU</option>
-            <option value="mL">mL</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-            Frequency
-          </label>
-          <select
-            value={frequencyType}
-            onChange={(e) => setFrequencyType(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-          >
-            <option value="daily">Daily</option>
-            <option value="every_x_days">Every X Days</option>
-          </select>
-        </div>
-
-        {frequencyType === "every_x_days" ? (
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-              Every how many days?
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+              Dose amount
             </label>
             <input
               type="number"
-              min="1"
-              step="1"
-              value={frequencyValue}
-              onChange={(e) => setFrequencyValue(e.target.value)}
-              placeholder="Example: 3"
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+              min="0.01"
+              step="0.01"
+              value={doseAmount}
+              onChange={(e) => setDoseAmount(e.target.value)}
+              placeholder="250"
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
             />
           </div>
-        ) : null}
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-            Start date
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-            End date
-          </label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Injection time
-        </label>
-        <input
-          type="time"
-          value={defaultTime}
-          onChange={(e) => setDefaultTime(e.target.value)}
-          className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-        />
-        <p className="mt-2 text-xs text-[var(--color-muted)]">
-          This is the planned injection time used to calculate reminder timing.
-        </p>
-      </div>
-
-      <div className="rounded-2xl border border-[var(--color-border)] p-4">
-        <h3 className="text-sm font-semibold text-[var(--color-text)]">
-          Reminder Settings
-        </h3>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-            />
-            Plan is active
-          </label>
-
-          <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
-            <input
-              type="checkbox"
-              checked={remindersEnabled}
-              onChange={(e) => setRemindersEnabled(e.target.checked)}
-            />
-            Enable reminders
-          </label>
-        </div>
-
-        {remindersEnabled ? (
-          <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-              Remind me how many hours before?
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+              Dose unit
             </label>
             <select
-              value={reminderOffsetHours}
-              onChange={(e) => setReminderOffsetHours(e.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+              value={doseUnit}
+              onChange={(e) => setDoseUnit(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
             >
-              <option value="1">1 hour</option>
-              <option value="6">6 hours</option>
-              <option value="12">12 hours</option>
-              <option value="24">24 hours</option>
-              <option value="48">48 hours</option>
+              <option value="mcg">mcg</option>
+              <option value="mg">mg</option>
+              <option value="IU">IU</option>
+              <option value="mL">mL</option>
             </select>
           </div>
-        ) : null}
-      </div>
+        </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-          Notes
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={4}
-          placeholder="Example: rotate left/right abdomen and log any reactions"
-          className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-        />
-      </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+              Frequency
+            </label>
+            <select
+              value={frequencyType}
+              onChange={(e) => setFrequencyType(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            >
+              <option value="daily">Daily</option>
+              <option value="every_x_days">Every X days</option>
+            </select>
+          </div>
+
+          {frequencyType === "every_x_days" ? (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                Repeat every
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={frequencyValue}
+                onChange={(e) => setFrequencyValue(e.target.value)}
+                placeholder="3"
+                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+              />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+              Start date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+              End date
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Injection time
+          </label>
+          <input
+            type="time"
+            value={defaultTime}
+            onChange={(e) => setDefaultTime(e.target.value)}
+            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+          />
+          <p className="mt-1.5 text-xs text-[var(--color-muted)]">
+            Used to calculate reminder timing.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-[var(--color-border)] p-4">
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
+            Plan settings
+          </h3>
+
+          <div className="mt-3 grid gap-3">
+            <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
+              Plan is active
+            </label>
+
+            <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
+              <input
+                type="checkbox"
+                checked={remindersEnabled}
+                onChange={(e) => setRemindersEnabled(e.target.checked)}
+              />
+              Enable reminders
+            </label>
+
+            {remindersEnabled ? (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+                  Reminder timing
+                </label>
+                <select
+                  value={reminderOffsetHours}
+                  onChange={(e) => setReminderOffsetHours(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+                >
+                  <option value="1">1 hour before</option>
+                  <option value="6">6 hours before</option>
+                  <option value="12">12 hours before</option>
+                  <option value="24">24 hours before</option>
+                  <option value="48">48 hours before</option>
+                </select>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Notes
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Rotate left/right abdomen and log any reactions"
+            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+          />
+        </div>
+      </fieldset>
 
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={isPending}
-        className={`rounded-xl px-4 py-3 text-sm font-medium text-white transition ${
-          isPending
+        disabled={isSubmitDisabled}
+        className={`min-h-11 rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${
+          isSubmitDisabled
             ? "cursor-not-allowed bg-slate-400"
             : "bg-[var(--color-accent)] hover:opacity-90"
         }`}
       >
-        {isPending ? "Saving..." : "Create plan"}
+        {isFormLocked
+          ? "Upgrade to create a plan"
+          : isPending
+            ? "Saving..."
+            : "Create plan"}
       </button>
 
       {message ? (

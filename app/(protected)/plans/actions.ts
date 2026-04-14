@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { syncPlanReminders } from "@/lib/reminders/syncPlanReminders";
 import type { InjectionPlan as ReminderInjectionPlan } from "@/lib/reminders/generateOccurrences";
+import { getEffectivePlanTierForUser } from "@/lib/billing/getEffectivePlanTier";
 
 type CreateInjectionPlanInput = {
   peptideId: string;
@@ -34,6 +35,60 @@ type InjectionPlanRow = {
   reminder_offset_hours: number | null;
 };
 
+type BillingProfile = {
+  plan_tier?: string | null;
+  subscription_status?: string | null;
+};
+
+type PlanTier = "free" | "pro";
+
+function getMaxActivePlans(planTier: PlanTier): number | null {
+  return planTier === "pro" ? null : 2;
+}
+
+async function getBillingProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<BillingProfile | undefined> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("plan_tier, subscription_status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? undefined) as BillingProfile | undefined;
+}
+
+async function getResolvedPlanTier(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  email?: string | null
+): Promise<PlanTier> {
+  const profile = await getBillingProfile(supabase, userId);
+  return getEffectivePlanTierForUser(email, profile);
+}
+
+async function getActivePlanCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
+  const { count, error } = await supabase
+    .from("injection_plans")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("active", true);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
 function mapPlanRowToReminderPlan(plan: InjectionPlanRow): ReminderInjectionPlan {
   return {
     id: plan.id,
@@ -58,11 +113,7 @@ function getReadableErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error
-  ) {
+  if (typeof error === "object" && error !== null && "message" in error) {
     return String((error as { message: unknown }).message);
   }
 
@@ -105,12 +156,46 @@ export async function createInjectionPlan(input: CreateInjectionPlanInput) {
   }
 
   if (
+    input.frequencyType === "every_x_days" &&
+    (!input.frequencyValue || input.frequencyValue < 1)
+  ) {
+    return {
+      success: false,
+      error: "Please enter a valid repeat interval.",
+    };
+  }
+
+  if (
     input.remindersEnabled &&
     (!input.reminderOffsetHours || input.reminderOffsetHours < 1)
   ) {
     return {
       success: false,
       error: "Reminder offset must be at least 1 hour.",
+    };
+  }
+
+  try {
+    const planTier = await getResolvedPlanTier(supabase, user.id, user.email);
+    const maxActivePlans = getMaxActivePlans(planTier);
+
+    if (input.active && maxActivePlans !== null) {
+      const activePlanCount = await getActivePlanCount(supabase, user.id);
+
+      if (activePlanCount >= maxActivePlans) {
+        return {
+          success: false,
+          error:
+            "Free includes up to 2 active plans. Upgrade to Pro or archive an existing plan first.",
+        };
+      }
+    }
+  } catch (limitError) {
+    return {
+      success: false,
+      error: `Could not verify your plan limit: ${getReadableErrorMessage(
+        limitError
+      )}`,
     };
   }
 
@@ -129,8 +214,10 @@ export async function createInjectionPlan(input: CreateInjectionPlanInput) {
       default_time: input.defaultTime || null,
       active: input.active,
       reminders_enabled: input.remindersEnabled,
-      reminder_offset_hours: input.reminderOffsetHours,
-      notes: input.notes || "",
+      reminder_offset_hours: input.remindersEnabled
+        ? input.reminderOffsetHours
+        : null,
+      notes: input.notes?.trim() || "",
     })
     .select(
       `
@@ -218,6 +305,47 @@ export async function toggleInjectionPlanActive(
 
   if (!planId) {
     return { success: false, error: "Plan ID is required." };
+  }
+
+  try {
+    const planTier = await getResolvedPlanTier(supabase, user.id, user.email);
+    const maxActivePlans = getMaxActivePlans(planTier);
+
+    if (nextActive && maxActivePlans !== null) {
+      const activePlanCount = await getActivePlanCount(supabase, user.id);
+
+      const { data: currentPlan, error: currentPlanError } = await supabase
+        .from("injection_plans")
+        .select("id, active")
+        .eq("id", planId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (currentPlanError) {
+        return { success: false, error: currentPlanError.message };
+      }
+
+      if (!currentPlan) {
+        return { success: false, error: "Plan not found." };
+      }
+
+      const isAlreadyActive = Boolean(currentPlan.active);
+
+      if (!isAlreadyActive && activePlanCount >= maxActivePlans) {
+        return {
+          success: false,
+          error:
+            "Free includes up to 2 active plans. Upgrade to Pro or archive an existing plan first.",
+        };
+      }
+    }
+  } catch (limitError) {
+    return {
+      success: false,
+      error: `Could not verify your plan limit: ${getReadableErrorMessage(
+        limitError
+      )}`,
+    };
   }
 
   const { data: plan, error } = await supabase

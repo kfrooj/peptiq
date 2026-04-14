@@ -45,7 +45,7 @@ export default async function HomePage() {
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--color-muted)] sm:mt-4 sm:text-base lg:text-lg">
                 {user
                   ? "Review what’s due today, log injections, and keep your plans moving." 
-                  : "Sign up to access personalised features."}
+                  : " "}
               </p>
               <div>
                 <Link

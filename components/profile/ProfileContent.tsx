@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getEffectivePlanTierForUser } from "@/lib/billing/getEffectivePlanTier";
 import {
   ChangePasswordForm,
   InviteFriendCard,
@@ -63,11 +64,35 @@ type StackRow = {
   name: string;
 };
 
+type ProfileRow = {
+  name: string | null;
+  role: string | null;
+  disclaimer_accepted: boolean | null;
+  notification_email_reminders: boolean | null;
+  notification_missed_alerts: boolean | null;
+  plan_tier: string | null;
+  subscription_status: string | null;
+  subscription_current_period_end: string | null;
+};
+
 function formatJoinedDate(dateString?: string | null) {
   if (!dateString) return "—";
 
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatBillingDate(dateString?: string | null) {
+  if (!dateString) return null;
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return null;
 
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -508,7 +533,10 @@ export default async function ProfileContent() {
           role,
           disclaimer_accepted,
           notification_email_reminders,
-          notification_missed_alerts
+          notification_missed_alerts,
+          plan_tier,
+          subscription_status,
+          subscription_current_period_end
         `
       )
       .eq("id", userId)
@@ -551,7 +579,7 @@ export default async function ProfileContent() {
     getAdherenceForUser(userId, supabase),
   ]);
 
-  const profile = profileResult.data;
+  const profile = (profileResult.data ?? null) as ProfileRow | null;
 
   const plansCount = plansCountResult.count ?? 0;
   const injectionLogsCount = injectionLogsCountResult.count ?? 0;
@@ -609,6 +637,13 @@ export default async function ProfileContent() {
   const email = user.email ?? "—";
   const joinedDate = formatJoinedDate(user.created_at);
 
+  const planTier = getEffectivePlanTierForUser(user.email, profile ?? undefined);
+  const isPro = planTier === "pro";
+  const subscriptionStatus = profile?.subscription_status ?? "inactive";
+  const subscriptionPeriodEnd = formatBillingDate(
+    profile?.subscription_current_period_end
+  );
+
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
       <div className="space-y-4">
@@ -622,29 +657,87 @@ export default async function ProfileContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <InfoTile label="Email" value={email} />
-                <InfoTile label="Account Type" value="Free" />
                 <InfoTile label="Date Joined" value={joinedDate} />
                 <InfoTile label="Status" value="Active" />
+                <InfoTile
+                  label="Reminders"
+                  value={
+                    notificationPreferences.emailReminders ? "On" : "Off"
+                  }
+                />
               </div>
             </div>
           </SectionCard>
 
-          <SectionCard title="Subscription">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-                Current Plan
-              </p>
-              <p className="mt-1 text-xl font-semibold text-[var(--color-text)]">
-                Free
+          <SectionCard
+            title="Subscription"
+            description="Your current plan and upgrade options."
+          >
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                    Current Plan
+                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-xl font-semibold text-[var(--color-text)]">
+                      {isPro ? "Pro" : "Free"}
+                    </p>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        isPro
+                          ? "bg-blue-50 text-[var(--color-accent)]"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {isPro ? "Pro" : "Free"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-3 text-sm text-[var(--color-muted)]">
+                {isPro
+                  ? "Unlimited plans, full history, and deeper tracking tools."
+                  : "2 active plans, 30-day history, and core tracking tools."}
               </p>
 
-              <button
-                type="button"
-                disabled
-                className="mt-3 inline-flex w-full cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)]"
-              >
-                Manage Subscription (Coming Soon)
-              </button>
+              {isPro ? (
+                <p className="mt-2 text-xs text-[var(--color-muted)]">
+                  Status:{" "}
+                  <span className="font-medium text-[var(--color-text)]">
+                    {subscriptionStatus}
+                  </span>
+                  {subscriptionPeriodEnd ? ` · Renews through ${subscriptionPeriodEnd}` : ""}
+                </p>
+              ) : null}
+
+              <div className="mt-4 grid gap-2 text-sm">
+                <div className="rounded-xl bg-white px-3 py-2 text-[var(--color-text)]">
+                  {isPro ? "Unlimited active plans" : "Up to 2 active plans"}
+                </div>
+                <div className="rounded-xl bg-white px-3 py-2 text-[var(--color-text)]">
+                  {isPro ? "Full history access" : "30-day history access"}
+                </div>
+                <div className="rounded-xl bg-white px-3 py-2 text-[var(--color-text)]">
+                  {isPro
+                    ? "Advanced insights and reminders"
+                    : "Basic insights and reminders"}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <Link
+                  href="/pricing"
+                  className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                    isPro
+                      ? "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
+                      : "bg-[var(--color-text)] text-white hover:opacity-90"
+                  }`}
+                >
+                  {isPro ? "Manage Subscription" : "Upgrade to Pro"}
+                </Link>
+              </div>
             </div>
           </SectionCard>
         </div>
