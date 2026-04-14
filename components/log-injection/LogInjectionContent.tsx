@@ -1,30 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import NewInjectionLogForm from "@/components/NewInjectionLogForm";
-import InjectionLogActions from "@/components/InjectionLogActions";
-
-type PeptideRelation = {
-  id: string;
-  name: string;
-  category: string | null;
-};
-
-type PlanRelation = {
-  id: string;
-  plan_name: string;
-};
-
-type InjectionLog = {
-  id: string;
-  injection_at: string;
-  dose_amount: number;
-  dose_unit: string;
-  site: string;
-  notes: string | null;
-  created_at: string;
-  peptide: PeptideRelation | null;
-  plan: PlanRelation | null;
-};
+import InjectionHistoryTable from "@/components/log-injection/InjectionHistoryTable";
 
 type ActivePlan = {
   id: string;
@@ -32,6 +9,43 @@ type ActivePlan = {
   peptide_id: string;
   active: boolean;
 };
+
+type PeptideRow = {
+  id: string;
+  name: string;
+  category: string | null;
+};
+
+type RawLogRow = {
+  id: string;
+  injection_at: string;
+  dose_amount: number;
+  dose_unit: string;
+  site: string;
+  notes: string | null;
+  created_at: string;
+  peptide:
+    | {
+        id: string;
+        name: string;
+        category: string | null;
+      }
+    | {
+        id: string;
+        name: string;
+        category: string | null;
+      }[]
+    | null;
+};
+
+function normalizeActivePlans(rawPlans: any[]): ActivePlan[] {
+  return rawPlans.map((plan) => ({
+    id: plan.id,
+    plan_name: plan.plan_name,
+    peptide_id: plan.peptide_id,
+    active: Boolean(plan.active),
+  }));
+}
 
 function normalizeSingleRelation<T>(
   value: T | T[] | null | undefined
@@ -41,29 +55,6 @@ function normalizeSingleRelation<T>(
   }
 
   return value ?? null;
-}
-
-function normalizeInjectionLogs(rawLogs: any[]): InjectionLog[] {
-  return rawLogs.map((log) => ({
-    id: log.id,
-    injection_at: log.injection_at,
-    dose_amount: log.dose_amount,
-    dose_unit: log.dose_unit,
-    site: log.site,
-    notes: log.notes ?? null,
-    created_at: log.created_at,
-    peptide: normalizeSingleRelation<PeptideRelation>(log.peptide),
-    plan: normalizeSingleRelation<PlanRelation>(log.plan),
-  }));
-}
-
-function normalizeActivePlans(rawPlans: any[]): ActivePlan[] {
-  return rawPlans.map((plan) => ({
-    id: plan.id,
-    plan_name: plan.plan_name,
-    peptide_id: plan.peptide_id,
-    active: Boolean(plan.active),
-  }));
 }
 
 function toDateTimeLocalValue(value: string) {
@@ -127,23 +118,17 @@ export default async function LogInjectionContent({
           id,
           name,
           category
-        ),
-        plan:injection_plans (
-          id,
-          plan_name
         )
       `
     )
     .eq("user_id", user.id)
-    .order("injection_at", { ascending: false })
-    .limit(20);
+    .order("injection_at", { ascending: false });
 
   if (logsError) {
     throw new Error(logsError.message);
   }
 
   const plans = normalizeActivePlans(rawPlans ?? []);
-  const logs = normalizeInjectionLogs(rawLogs ?? []);
 
   const selectedPlan = plans.find((plan) => plan.id === planId) ?? null;
   const lockedToPlan = Boolean(selectedPlan);
@@ -151,6 +136,18 @@ export default async function LogInjectionContent({
   const formPlans = lockedToPlan && selectedPlan ? [selectedPlan] : plans;
   const initialPlanId = lockedToPlan && selectedPlan ? selectedPlan.id : "";
   const initialInjectionAt = injectionAt ? toDateTimeLocalValue(injectionAt) : "";
+
+  const historyLogs = ((rawLogs ?? []) as RawLogRow[]).map((log) => {
+    const peptide = normalizeSingleRelation(log.peptide);
+
+    return {
+      id: log.id,
+      injection_at: log.injection_at,
+      dose_amount: log.dose_amount,
+      dose_unit: log.dose_unit,
+      peptide_name: peptide?.name ?? "Unknown peptide",
+    };
+  });
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
@@ -167,11 +164,11 @@ export default async function LogInjectionContent({
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
           Log injections, track site rotation, and keep a complete history in a
-          mobile-friendly format.
+          compact mobile-friendly format.
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-[var(--color-text)]">
@@ -192,109 +189,14 @@ export default async function LogInjectionContent({
           ) : null}
 
           <NewInjectionLogForm
-            peptides={peptides ?? []}
+            peptides={(peptides ?? []) as PeptideRow[]}
             plans={formPlans}
             initialPlanId={initialPlanId}
             initialInjectionAt={initialInjectionAt}
           />
         </section>
 
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[var(--color-text)]">
-                Injection History
-              </h2>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Your recent entries, newest first.
-              </p>
-            </div>
-
-            <span className="inline-flex self-start rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-muted)]">
-              {logs.length} {logs.length === 1 ? "entry" : "entries"}
-            </span>
-          </div>
-
-          <div className="grid gap-4">
-            {!logs.length ? (
-              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
-                No injections logged yet.
-              </div>
-            ) : (
-              logs.map((log) => (
-                <article
-                  key={log.id}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
-                          {log.peptide?.name || "Unknown peptide"}
-                        </h3>
-
-                        {log.peptide?.category ? (
-                          <span className="inline-flex rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs font-medium text-[var(--color-muted)]">
-                            {log.peptide.category}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <dl className="mt-3 grid gap-2 text-sm text-[var(--color-muted)]">
-                        <div className="flex flex-wrap gap-2">
-                          <dt className="font-medium text-[var(--color-text)]">
-                            Date:
-                          </dt>
-                          <dd>{new Date(log.injection_at).toLocaleString()}</dd>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <dt className="font-medium text-[var(--color-text)]">
-                            Dose:
-                          </dt>
-                          <dd>
-                            {log.dose_amount} {log.dose_unit}
-                          </dd>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <dt className="font-medium text-[var(--color-text)]">
-                            Site:
-                          </dt>
-                          <dd>{log.site}</dd>
-                        </div>
-
-                        {log.plan?.plan_name ? (
-                          <div className="flex flex-wrap gap-2">
-                            <dt className="font-medium text-[var(--color-text)]">
-                              Plan:
-                            </dt>
-                            <dd>{log.plan.plan_name}</dd>
-                          </div>
-                        ) : null}
-
-                        {log.notes ? (
-                          <div className="mt-1">
-                            <dt className="font-medium text-[var(--color-text)]">
-                              Notes:
-                            </dt>
-                            <dd className="mt-1 whitespace-pre-wrap text-[var(--color-muted)]">
-                              {log.notes}
-                            </dd>
-                          </div>
-                        ) : null}
-                      </dl>
-                    </div>
-
-                    <div className="shrink-0 self-start">
-                      <InjectionLogActions logId={log.id} />
-                    </div>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
+        <InjectionHistoryTable logs={historyLogs} />
       </div>
     </main>
   );

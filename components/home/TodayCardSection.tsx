@@ -214,7 +214,7 @@ export default async function TodayCardSection({
             Today
           </h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Your next step and daily activity snapshot.
+            Your next action and daily progress at a glance.
           </p>
         </div>
 
@@ -226,76 +226,100 @@ export default async function TodayCardSection({
         </Link>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
-        {nextDuePlan ? (
-          <>
-            <p className="text-sm text-[var(--color-muted)]">Next due</p>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <Link
-  href="/plans"
-  className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
->
-  <p className="text-lg font-semibold text-[var(--color-text)]">
-    {nextDuePlan.planName}
-  </p>
-</Link>
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+            Next action
+          </p>
+
+          {nextDuePlan ? (
+            <>
+              <div className="mt-2">
+                <p className="text-xl font-semibold text-[var(--color-text)]">
+                  {nextDuePlan.planName}
+                </p>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">
                   {nextDuePlan.doseAmount && nextDuePlan.doseUnit
-                    ? `${nextDuePlan.doseAmount}${nextDuePlan.doseUnit} · `
+                    ? `${nextDuePlan.doseAmount} ${nextDuePlan.doseUnit} · `
                     : ""}
-                  {nextDuePlan.timeLabel}
+                  Due today at {nextDuePlan.timeLabel}
                 </p>
               </div>
 
-              <Link
-                href={`/log-injection?planId=${nextDuePlan.id}`}
-                className="inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90"
-              >
-                Log Now
-              </Link>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-[var(--color-muted)]">Next due</p>
-            <p className="mt-2 text-lg font-semibold text-[var(--color-text)]">
-              No injections due today
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href={`/log-injection?planId=${nextDuePlan.id}`}
+                  className="inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                >
+                  Log Now
+                </Link>
+
+                <Link
+                  href="/plans"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                >
+                  View Plans
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mt-2">
+                <p className="text-xl font-semibold text-[var(--color-text)]">
+                  No injections due today
+                </p>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">
+                  You’re all caught up for now.
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/log-injection"
+                  className="inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                >
+                  Log Injection
+                </Link>
+
+                <Link
+                  href="/plans"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                >
+                  View Plans
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
+            <p className="text-sm text-[var(--color-muted)]">Active plans</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
+              {activePlansCount}
             </p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              You’re all caught up for now.
+          </div>
+
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
+            <p className="text-sm text-[var(--color-muted)]">Logged today</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
+              {injectionsLoggedToday}
             </p>
-          </>
-        )}
-      </div>
+          </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
-          <p className="text-sm text-[var(--color-muted)]">Active plans</p>
-          <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
-            {activePlansCount}
-          </p>
-        </div>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
+            <p className="text-sm text-[var(--color-muted)]">Due today</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
+              {completedTodayCount}/{dueTodayCount}
+            </p>
+          </div>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
-          <p className="text-sm text-[var(--color-muted)]">Logged today</p>
-          <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
-            {injectionsLoggedToday}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
-          <p className="text-sm text-[var(--color-muted)]">Due today</p>
-          <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
-            {completedTodayCount}/{dueTodayCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
-          <p className="text-sm text-[var(--color-muted)]">Today’s adherence</p>
-          <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
-            {adherence}
-          </p>
+          <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
+            <p className="text-sm text-[var(--color-muted)]">Adherence</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">
+              {adherence}
+            </p>
+          </div>
         </div>
       </div>
     </section>

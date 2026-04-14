@@ -264,13 +264,12 @@ export default async function DashboardContent() {
       <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mb-8 sm:rounded-3xl sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            
-            <h1  className="mt-1 text-2xl font-bold leading-tight text-[var(--color-text)] sm:text-3xl">
+            <h1 className="mt-1 text-2xl font-bold leading-tight text-[var(--color-text)] sm:text-3xl">
               Welcome back, {displayName}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-              Here’s your PEPT|IQ snapshot — what needs attention, what
-              is coming up, and where to jump back in.
+              Here’s your PEPTIQ snapshot — what needs attention, what is coming
+              up next, and where to jump back in.
             </p>
           </div>
 
@@ -283,7 +282,7 @@ export default async function DashboardContent() {
                   : "bg-red-50 text-red-700"
             }`}
           >
-            30-day adherence {adherence}%
+            60-day adherence {adherence}%
           </div>
         </div>
       </section>
@@ -371,12 +370,17 @@ export default async function DashboardContent() {
           <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
             {nextUnresolvedReminder ? (
               <>
-                <p className="text-sm font-semibold text-[var(--color-text)]">
-                  {nextUnresolvedReminder.plan?.plan_name || "Planned injection"}
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                  Next action
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                  Scheduled for {formatLocalDateTime(nextUnresolvedReminder.reminder_for)}
-                </p>
+                <div className="mt-2">
+                  <p className="text-xl font-semibold text-[var(--color-text)]">
+                    {nextUnresolvedReminder.plan?.plan_name || "Planned injection"}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">
+                    Scheduled for {formatLocalDateTime(nextUnresolvedReminder.reminder_for)}
+                  </p>
+                </div>
 
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <Link
@@ -384,6 +388,13 @@ export default async function DashboardContent() {
                     className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
                   >
                     Log Injection
+                  </Link>
+
+                  <Link
+                    href="/plans"
+                    className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-center text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                  >
+                    View Plans
                   </Link>
 
                   <Link
@@ -396,13 +407,18 @@ export default async function DashboardContent() {
               </>
             ) : typedPlans.length > 0 ? (
               <>
-                <p className="text-sm font-semibold text-[var(--color-text)]">
-                  Nothing due right now
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                  Next action
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                  You do not have any upcoming unresolved reminders at the
-                  moment. You can still log an injection or review your progress.
-                </p>
+                <div className="mt-2">
+                  <p className="text-xl font-semibold text-[var(--color-text)]">
+                    Nothing due right now
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+                    You do not have any upcoming unresolved reminders at the
+                    moment, but you can still log an injection or review your progress.
+                  </p>
+                </div>
 
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <Link
@@ -410,6 +426,13 @@ export default async function DashboardContent() {
                     className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
                   >
                     Log Injection
+                  </Link>
+
+                  <Link
+                    href="/plans"
+                    className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-center text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                  >
+                    View Plans
                   </Link>
 
                   <Link
@@ -422,13 +445,18 @@ export default async function DashboardContent() {
               </>
             ) : (
               <>
-                <p className="text-sm font-semibold text-[var(--color-text)]">
-                  Start by creating your first plan
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                  Next action
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                  Plans power reminders, adherence tracking, and the rest of your
-                  dashboard experience.
-                </p>
+                <div className="mt-2">
+                  <p className="text-xl font-semibold text-[var(--color-text)]">
+                    Start by creating your first plan
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+                    Plans power reminders, adherence tracking, and the rest of your
+                    dashboard experience.
+                  </p>
+                </div>
 
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <Link
