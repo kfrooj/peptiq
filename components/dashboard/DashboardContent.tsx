@@ -264,15 +264,13 @@ export default async function DashboardContent() {
       <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mb-8 sm:rounded-3xl sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-[var(--color-accent)]">
-              Welcome back
-            </p>
-            <h1 className="mt-1 text-2xl font-bold leading-tight text-[var(--color-text)] sm:text-3xl">
-              {displayName}
+            
+            <h1  className="mt-1 text-2xl font-bold leading-tight text-[var(--color-text)] sm:text-3xl">
+              Welcome back, {displayName}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-              Here’s your PEPTIQ snapshot for today — what needs attention, what
-              is coming up next, and where to jump back in.
+              Here’s your PEPT|IQ snapshot — what needs attention, what
+              is coming up, and where to jump back in.
             </p>
           </div>
 

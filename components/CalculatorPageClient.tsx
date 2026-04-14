@@ -24,8 +24,13 @@ export default function CalculatorPageClient() {
 
         <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-muted)]">
           Calculate concentration, required volume, and syringe units for research
-          preparation. This tool is for informational and research purposes only.
+          preparation. 
         </p>
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p className="text-sm font-medium text-amber-900">
+          Reference information only, not medical advice.
+        </p>
+      </div>
 
         {peptideName ? (
           <div className="mt-5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">

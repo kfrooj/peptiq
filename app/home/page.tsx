@@ -27,27 +27,35 @@ export default async function HomePage() {
           <div className="grid items-start gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10">
             <div>
               <span className="inline-flex rounded-full border border-[var(--color-border)] bg-white px-3 py-1 text-xs font-medium text-[var(--color-muted)] shadow-sm">
-                Research planning • dose calculation • protocol tracking
+                • Research • dose calculation • protocol planning & tracking •
               </span>
 
               <h1 className="mt-5 max-w-3xl text-3xl font-bold tracking-tight text-[var(--color-text)] sm:mt-6 sm:text-4xl lg:text-5xl">
                 {user
-                  ? "Stay on top of your peptide protocol today."
+                  ? "Stay on top of your peptide protocols."
                   : "PEPTIQ helps you plan, track, and stay consistent with peptide protocols."}
               </h1>
 
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--color-muted)] sm:mt-5 sm:text-base lg:text-lg">
-                Built for clarity and consistency, PEPTIQ combines peptide
+                Built for clarity and consistency, PEPT|IQ combines peptide
                 reference material, dosage planning, stack building, injection
                 tracking, and adherence reminders in one place.
               </p>
 
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--color-muted)] sm:mt-4 sm:text-base lg:text-lg">
                 {user
-                  ? "Review what’s due today, log injections, and keep your plans moving."
+                  ? "Review what’s due today, log injections, and keep your plans moving." 
                   : "Sign up to access personalised features."}
               </p>
-
+              <div>
+                <Link
+                  href="https://peptiq.uk/login"
+                  className="mt-3 max-w-2xl text-sm leading-7 text-[var(--color-accent)] sm:mt-4 sm:text-base lg:text-lg">
+                
+                  • Sign up to access personalised features •
+                </Link>
+            
+</div>
               <div className="mt-6 grid gap-3 sm:mt-8 sm:flex sm:flex-wrap">
                 <Link
                   href={primaryHref}

@@ -91,25 +91,26 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
   const hasActiveFilters = Boolean(search.trim() || selectedCategory);
 
   return (
-    <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+    <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-[var(--color-text)]">
               Browse peptides
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Explore published peptide entries and open detailed research pages.
+              Explore detailed research insights, usage patterns, and
+              calculator-ready data for each peptide.
             </p>
           </div>
 
-          <div className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
+          <div className="text-xs font-medium text-[var(--color-muted)] sm:text-sm">
             {filteredPeptides.length} result
             {filteredPeptides.length === 1 ? "" : "s"}
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-[1.4fr_0.9fr_auto]">
+        <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-[1.4fr_0.9fr_auto]">
           <input
             type="text"
             placeholder="Search by peptide name or category"
@@ -137,7 +138,7 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
               setSearch("");
               setSelectedCategory("");
             }}
-            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-white hover:border-[var(--color-accent)]"
+            className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:bg-white md:w-auto"
           >
             Clear filters
           </button>
@@ -160,7 +161,7 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
         ) : null}
       </div>
 
-      <div className="mt-6 grid gap-4">
+      <div className="mt-6 grid gap-3 sm:gap-4">
         {filteredPeptides.length ? (
           filteredPeptides.map((peptide) => {
             const style = getCategoryStyle(peptide.category);
@@ -169,33 +170,29 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
               <Link
                 key={peptide.id}
                 href={`/peptides/${peptide.slug}`}
-                className={`group rounded-3xl border border-[var(--color-border)] ${style.bg} p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md`}
+                className={`group rounded-3xl border border-[var(--color-border)] ${style.bg} p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
-                    <div className="mb-3 flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)] ring-1 ${style.ring}`}
-                      >
-                        <span>{style.icon}</span>
-                        {peptide.category}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
-                      {peptide.name}
-                    </h3>
-
-                    <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                      View detailed research insights, usage patterns, and
-                      calculator-ready data.
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                      {peptide.category}
                     </p>
+
+                    <div className="mt-1 flex items-center gap-2">
+                      <span
+                        className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm ring-1 ${style.ring}`}
+                      >
+                        {style.icon}
+                      </span>
+
+                      <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--color-text)] sm:text-xl">
+                        {peptide.name}
+                      </h3>
+                    </div>
                   </div>
 
-                  <div className="shrink-0">
-                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-sm font-medium text-[var(--color-accent)] ring-1 ring-[var(--color-border)] transition group-hover:ring-[var(--color-accent)]">
-                      View details
-                    </span>
+                  <div className="shrink-0 text-[var(--color-accent)] transition-transform duration-200 group-hover:translate-x-0.5">
+                    <span className="text-lg leading-none">→</span>
                   </div>
                 </div>
               </Link>

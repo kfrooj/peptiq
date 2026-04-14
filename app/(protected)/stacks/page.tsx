@@ -144,7 +144,7 @@ export default async function StacksPage({
           Stack Builder
         </h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Build a custom peptide stack by selecting published peptides from your
+          Build a custom peptide stack by selecting published peptides from the
           database.
         </p>
       </div>

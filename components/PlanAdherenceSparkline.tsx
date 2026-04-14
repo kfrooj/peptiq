@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type TrendPoint = {
   key: string;
@@ -96,6 +96,13 @@ function getLabelIndexes(length: number) {
   return Array.from(new Set([first, middle, last]));
 }
 
+function getGridLines(height: number) {
+  return [0.25, 0.5, 0.75].map((ratio) => ({
+    y: Number((height * ratio).toFixed(2)),
+    key: ratio,
+  }));
+}
+
 export default function PlanAdherenceSparkline({
   points,
   lineColor,
@@ -110,6 +117,12 @@ export default function PlanAdherenceSparkline({
       null
   );
   const [showDetails, setShowDetails] = useState(defaultDetailsOpen);
+  const [animateIn, setAnimateIn] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAnimateIn(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const sparklinePath = useMemo(
     () => buildSparklinePath(points, CHART_WIDTH, CHART_HEIGHT),
@@ -127,6 +140,7 @@ export default function PlanAdherenceSparkline({
   );
 
   const labelIndexes = useMemo(() => getLabelIndexes(points.length), [points]);
+  const gridLines = useMemo(() => getGridLines(CHART_HEIGHT), []);
 
   const selectedDetails = selectedPoint
     ? reminderDetailsByDay[selectedPoint.key] ?? []
@@ -139,7 +153,7 @@ export default function PlanAdherenceSparkline({
   return (
     <div className="mt-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
           {trendLabel}
         </p>
         <span className="text-xs text-[var(--color-muted)]">{trendSummary}</span>
@@ -154,14 +168,43 @@ export default function PlanAdherenceSparkline({
               preserveAspectRatio="none"
               aria-label={`${trendLabel.toLowerCase()} sparkline`}
             >
-              <path d={sparklineArea} fill={lineColor} opacity="0.1" />
+              <defs>
+                <linearGradient id="sparkline-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={lineColor} stopOpacity="0.22" />
+                  <stop offset="100%" stopColor={lineColor} stopOpacity="0.03" />
+                </linearGradient>
+              </defs>
+
+              {gridLines.map((line) => (
+                <line
+                  key={line.key}
+                  x1="0"
+                  x2={CHART_WIDTH}
+                  y1={line.y}
+                  y2={line.y}
+                  stroke="currentColor"
+                  strokeOpacity="0.08"
+                  className="text-[var(--color-muted)]"
+                />
+              ))}
+
+              <path d={sparklineArea} fill="url(#sparkline-fill)" />
+
               <path
                 d={sparklinePath}
                 fill="none"
                 stroke={lineColor}
-                strokeWidth="2"
+                strokeWidth="2.25"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={{
+                  opacity: animateIn ? 1 : 0,
+                  transform: animateIn ? "translateY(0px)" : "translateY(2px)",
+                  transition:
+                    "opacity 450ms ease, transform 450ms ease, stroke-dashoffset 700ms ease",
+                  strokeDasharray: 400,
+                  strokeDashoffset: animateIn ? 0 : 400,
+                }}
               />
 
               {sparklinePoints.map(({ x, y, point, index }) => {
@@ -191,9 +234,12 @@ export default function PlanAdherenceSparkline({
                       r={isSelected ? 3.5 : isAnchor ? 2.4 : 1.8}
                       fill={lineColor}
                       opacity={
-                        hasData ? (isSelected ? 1 : isAnchor ? 0.85 : 0.55) : 0.18
+                        hasData ? (isSelected ? 1 : isAnchor ? 0.82 : 0.52) : 0.16
                       }
                       className="pointer-events-none"
+                      style={{
+                        transition: "r 180ms ease, opacity 180ms ease",
+                      }}
                     />
                   </g>
                 );
@@ -219,7 +265,7 @@ export default function PlanAdherenceSparkline({
             <button
               type="button"
               onClick={() => setShowDetails((prev) => !prev)}
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left"
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-left transition hover:bg-white"
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">

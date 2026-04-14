@@ -112,15 +112,11 @@ export default async function AdminPeptidesPage({
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-sm font-medium text-[var(--color-accent)]">
-            Admin
-          </p>
+          
           <h1 className="mt-1 text-3xl font-bold text-[var(--color-text)]">
             Admin Hub
           </h1>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">
-            Manage peptides, user tools, and future admin actions from one place.
-          </p>
+          
         </div>
 
       </div>

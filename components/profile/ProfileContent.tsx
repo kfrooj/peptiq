@@ -11,7 +11,6 @@ import type { ActionState } from "@/app/(protected)/profile/ProfileForms";
 import { sendPeptiqEmail } from "@/lib/email/resend";
 import { getPasswordChangedEmail } from "@/lib/email/templates/password-changed";
 
-
 type InjectionPlanRow = {
   id: string;
   user_id: string;
@@ -393,7 +392,6 @@ async function changePassword(
     status: "success",
     message: "Your password has been updated.",
   };
-
 }
 
 function SectionCard({
@@ -409,10 +407,10 @@ function SectionCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:rounded-3xl sm:p-6 ${className}`}
+      className={`rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5 ${className}`}
     >
-      <div className="mb-5">
-        <h2 className="text-xl font-semibold text-[var(--color-text)]">
+      <div className="mb-3">
+        <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
           {title}
         </h2>
         {description ? (
@@ -434,9 +432,11 @@ function InfoTile({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-4">
-      <p className="text-sm text-[var(--color-muted)]">{label}</p>
-      <div className="mt-2 text-sm font-medium text-[var(--color-text)]">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2.5 sm:px-4 sm:py-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+        {label}
+      </p>
+      <div className="mt-1 text-sm font-medium text-[var(--color-text)]">
         {value}
       </div>
     </div>
@@ -455,21 +455,25 @@ function StatTile({
   subtext?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-white px-4 py-4">
-      <p className="text-sm text-[var(--color-muted)]">{label}</p>
-      <div className="mt-2">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-white px-3 py-3 sm:px-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+        {label}
+      </p>
+      <div className="mt-1.5">
         {accent ? (
           <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-[var(--color-accent)]">
             {value}
           </span>
         ) : (
-          <span className="text-3xl font-semibold leading-none text-[var(--color-text)]">
+          <span className="text-2xl font-semibold leading-none text-[var(--color-text)]">
             {value}
           </span>
         )}
       </div>
       {subtext ? (
-        <p className="mt-2 text-xs text-[var(--color-muted)]">{subtext}</p>
+        <p className="mt-1.5 text-xs leading-5 text-[var(--color-muted)]">
+          {subtext}
+        </p>
       ) : null}
     </div>
   );
@@ -485,7 +489,6 @@ export default async function ProfileContent() {
   if (!user) return null;
 
   const userId = user.id;
-  
 
   const [
     profileResult,
@@ -607,34 +610,38 @@ export default async function ProfileContent() {
   const joinedDate = formatJoinedDate(user.created_at);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
+    <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_0.9fr]">
           <SectionCard
             title="Personal Information"
-            description="Your account details and basic profile information."
+            description="Your account details and profile settings."
           >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid gap-3">
               <UpdateNameForm defaultName={name} action={updateName} />
-              <InfoTile label="Email" value={email} />
-              <InfoTile label="Date Joined" value={joinedDate} />
-              <InfoTile label="Account Type" value="Free" />
+
+              <div className="grid grid-cols-2 gap-3">
+                <InfoTile label="Email" value={email} />
+                <InfoTile label="Account Type" value="Free" />
+                <InfoTile label="Date Joined" value={joinedDate} />
+                <InfoTile label="Status" value="Active" />
+              </div>
             </div>
           </SectionCard>
 
           <SectionCard title="Subscription">
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm text-[var(--color-muted)]">Current Plan</p>
-                <p className="mt-2 text-3xl font-semibold text-[var(--color-text)]">
-                  Free
-                </p>
-              </div>
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                Current Plan
+              </p>
+              <p className="mt-1 text-xl font-semibold text-[var(--color-text)]">
+                Free
+              </p>
 
               <button
                 type="button"
                 disabled
-                className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm font-medium text-[var(--color-muted)]"
+                className="mt-3 inline-flex w-full cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)]"
               >
                 Manage Subscription (Coming Soon)
               </button>
@@ -643,7 +650,7 @@ export default async function ProfileContent() {
         </div>
 
         <SectionCard title="Activity Stats">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile label="Plans" value={plansCount} />
             <StatTile label="Injections Logged" value={injectionLogsCount} />
             <StatTile
@@ -652,7 +659,7 @@ export default async function ProfileContent() {
               accent
               subtext={
                 adherence.expectedCount > 0
-                  ? `${adherence.completedCount} of ${adherence.expectedCount} due injections completed`
+                  ? `${adherence.completedCount} of ${adherence.expectedCount} completed`
                   : "No due injections yet"
               }
             />
@@ -660,25 +667,25 @@ export default async function ProfileContent() {
           </div>
         </SectionCard>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
           <SectionCard
             title="Favorites"
             description="Your saved peptides and stacks for quick access."
           >
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-[var(--color-muted)]">
                 {totalFavoritesCount} total saved favorites
               </div>
 
               <Link
                 href="/peptides"
-                className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
               >
                 Browse Peptides
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-base font-semibold text-[var(--color-text)]">
@@ -690,11 +697,11 @@ export default async function ProfileContent() {
                 </div>
 
                 {favoritePeptides.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {favoritePeptides.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-4"
+                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
                       >
                         <Link
                           href={`/peptides/${item.id}`}
@@ -713,7 +720,7 @@ export default async function ProfileContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-8 text-sm text-[var(--color-muted)]">
+                  <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-5 text-sm text-[var(--color-muted)]">
                     No favorite peptides yet.
                   </div>
                 )}
@@ -730,11 +737,11 @@ export default async function ProfileContent() {
                 </div>
 
                 {favoriteStacks.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {favoriteStacks.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-4"
+                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
                       >
                         <Link
                           href={`/stacks/${item.id}`}
@@ -748,7 +755,7 @@ export default async function ProfileContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-8 text-sm text-[var(--color-muted)]">
+                  <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-5 text-sm text-[var(--color-muted)]">
                     No favorite stacks yet.
                   </div>
                 )}
@@ -758,9 +765,9 @@ export default async function ProfileContent() {
 
           <SectionCard
             title="Notifications"
-            description="Manage the emails PEPTIQ can send you. Push notifications can be added later in the mobile app."
+            description="Manage the emails PEPTIQ can send you."
           >
-            <div className="space-y-6">
+            <div className="space-y-4">
               <UpdateNotificationsForm
                 defaultEmailReminders={notificationPreferences.emailReminders}
                 defaultMissedReminderAlerts={
@@ -769,7 +776,7 @@ export default async function ProfileContent() {
                 action={updateNotifications}
               />
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 <InviteFriendCard shareUrl="https://peptiq.uk/" />
 
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
@@ -777,8 +784,7 @@ export default async function ProfileContent() {
                     Security emails
                   </p>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Password reset and account security alerts are always enabled
-                    to help keep your account secure.
+                    Password reset and account security alerts are always enabled.
                   </p>
                 </div>
               </div>
@@ -786,68 +792,66 @@ export default async function ProfileContent() {
           </SectionCard>
         </div>
 
-    <SectionCard title="Security & Account">
-  <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_1fr]">
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
-      <h3 className="text-lg font-semibold text-[var(--color-text)]">
-        Change Password
-      </h3>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        Update your password while logged in. For security, PEPTIQ will alert
-        you when your password has been changed.
-      </p>
+        <SectionCard title="Security & Account">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.3fr_1fr]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+              <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
+                Change Password
+              </h3>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Update your password while logged in.
+              </p>
 
-      <ChangePasswordForm action={changePassword} />
-    </div>
+              <ChangePasswordForm action={changePassword} />
+            </div>
 
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
-        <h3 className="text-lg font-semibold text-[var(--color-text)]">
-          Security Emails
-        </h3>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">
-          Password reset and account security alerts are always enabled to help
-          keep your account secure.
-        </p>
-      </div>
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+                <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
+                  Security Emails
+                </h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">
+                  Password reset and account alerts stay enabled for security.
+                </p>
+              </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
-        <h3 className="text-lg font-semibold text-[var(--color-text)]">
-          Account Tools
-        </h3>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">
-          Future account management options will live here as PEPTIQ grows.
-        </p>
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+                <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
+                  Account Tools
+                </h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">
+                  More account management options will be added here.
+                </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          <button
-            type="button"
-            disabled
-            className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-muted)]"
-          >
-            Export Data (Coming Soon)
-          </button>
+                <div className="mt-3 grid grid-cols-1 gap-2.5">
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)]"
+                  >
+                    Export Data (Coming Soon)
+                  </button>
 
-          <button
-            type="button"
-            disabled
-            className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-muted)]"
-          >
-            Sign Out of All Devices (Coming Soon)
-          </button>
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)]"
+                  >
+                    Sign Out of All Devices (Coming Soon)
+                  </button>
 
-          <button
-            type="button"
-            disabled
-            className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-muted)]"
-          >
-            Delete Account (Coming Soon)
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</SectionCard>
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)]"
+                  >
+                    Delete Account (Coming Soon)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
       </div>
     </main>
   );
