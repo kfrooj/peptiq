@@ -56,6 +56,7 @@ type FavoriteStackIdRow = {
 type PeptideRow = {
   id: string;
   name: string;
+  slug: string;
   category: string | null;
 };
 
@@ -603,7 +604,7 @@ export default async function ProfileContent() {
     favoritePeptideIds.length > 0
       ? supabase
           .from("peptides")
-          .select("id, name, category")
+          .select("id, name, slug, category")
           .in("id", favoritePeptideIds)
       : Promise.resolve({ data: [] as PeptideRow[], error: null }),
 
@@ -656,7 +657,14 @@ export default async function ProfileContent() {
               <UpdateNameForm defaultName={name} action={updateName} />
 
               <div className="grid grid-cols-2 gap-3">
-                <InfoTile label="Email" value={email} />
+                <InfoTile
+  label="Email"
+  value={
+    <span className="block max-w-full truncate" title={email}>
+      {email}
+    </span>
+  }
+/>
                 <InfoTile label="Date Joined" value={joinedDate} />
                 <InfoTile label="Status" value="Active" />
                 <InfoTile
@@ -727,17 +735,17 @@ export default async function ProfileContent() {
               </div>
 
               <div className="mt-4">
-                <Link
-                  href="/pricing"
-                  className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                    isPro
-                      ? "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
-                      : "bg-[var(--color-text)] text-white hover:opacity-90"
-                  }`}
-                >
-                  {isPro ? "Manage Subscription" : "Upgrade to Pro"}
-                </Link>
-              </div>
+  <Link
+    href={isPro ? "/manage-subscription" : "/pricing"}
+    className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+      isPro
+        ? "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
+        : "bg-[var(--color-text)] text-white hover:opacity-90"
+    }`}
+  >
+    {isPro ? "Manage Subscription" : "Upgrade to Pro"}
+  </Link>
+</div>
             </div>
           </SectionCard>
         </div>
@@ -797,7 +805,7 @@ export default async function ProfileContent() {
                         className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
                       >
                         <Link
-                          href={`/peptides/${item.id}`}
+                          href={`/peptides/${item.slug}`}
                           className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
                         >
                           <p className="font-medium text-[var(--color-text)]">
@@ -837,7 +845,7 @@ export default async function ProfileContent() {
                         className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
                       >
                         <Link
-                          href={`/stacks/${item.id}`}
+                          href="/stacks"
                           className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
                         >
                           <p className="font-medium text-[var(--color-text)]">
@@ -858,7 +866,7 @@ export default async function ProfileContent() {
 
           <SectionCard
             title="Notifications"
-            description="Manage the emails PEPTIQ can send you."
+            description="Manage the emails PEPT|IQ can send you."
           >
             <div className="space-y-4">
               <UpdateNotificationsForm
@@ -899,7 +907,7 @@ export default async function ProfileContent() {
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+        {/*      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
                 <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
                   Security Emails
                 </h3>
@@ -907,7 +915,7 @@ export default async function ProfileContent() {
                   Password reset and account alerts stay enabled for security.
                 </p>
               </div>
-
+*/}
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
                 <h3 className="text-base font-semibold text-[var(--color-text)] sm:text-lg">
                   Account Tools

@@ -8,7 +8,6 @@ type Peptide = {
   id: string;
   name: string;
   category: string | null;
-  benefits: string | null;
   published?: boolean;
 };
 
@@ -16,8 +15,6 @@ type StackItem = {
   id: string;
   name: string;
   category: string | null;
-  benefits: string | null;
-  note: string;
 };
 
 type InitialStack = {
@@ -35,6 +32,48 @@ type Props = {
 const LOCAL_STACK_ITEMS_KEY = "peptiq_stack";
 const LOCAL_STACK_NAME_KEY = "peptiq_stack_name";
 const LOCAL_STACK_ID_KEY = "peptiq_stack_id";
+
+function getCategoryStyle(category?: string | null) {
+  const value = (category || "").toLowerCase();
+
+  if (value.includes("fat") || value.includes("weight")) {
+    return {
+      bg: "bg-emerald-50",
+      ring: "ring-emerald-100",
+      icon: "🔥",
+    };
+  }
+
+  if (value.includes("healing") || value.includes("recovery")) {
+    return {
+      bg: "bg-blue-50",
+      ring: "ring-blue-100",
+      icon: "🛠️",
+    };
+  }
+
+  if (value.includes("cognitive") || value.includes("brain")) {
+    return {
+      bg: "bg-purple-50",
+      ring: "ring-purple-100",
+      icon: "🧠",
+    };
+  }
+
+  if (value.includes("longevity") || value.includes("anti")) {
+    return {
+      bg: "bg-amber-50",
+      ring: "ring-amber-100",
+      icon: "⏳",
+    };
+  }
+
+  return {
+    bg: "bg-gray-50",
+    ring: "ring-gray-100",
+    icon: "🧬",
+  };
+}
 
 export default function StackBuilder({
   peptides,
@@ -127,8 +166,7 @@ export default function StackBuilder({
     return peptides.filter((peptide) => {
       return (
         peptide.name.toLowerCase().includes(term) ||
-        (peptide.category ?? "").toLowerCase().includes(term) ||
-        (peptide.benefits ?? "").toLowerCase().includes(term)
+        (peptide.category ?? "").toLowerCase().includes(term)
       );
     });
   }, [search, peptides]);
@@ -144,8 +182,6 @@ export default function StackBuilder({
         id: peptide.id,
         name: peptide.name,
         category: peptide.category,
-        benefits: peptide.benefits,
-        note: "",
       },
     ]);
 
@@ -155,22 +191,6 @@ export default function StackBuilder({
 
   function removeFromStack(id: string) {
     setStackItems((current) => current.filter((item) => item.id !== id));
-    setSaveMessage("");
-    setSaveError("");
-  }
-
-  function updateNote(id: string, note: string) {
-    setStackItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              note,
-            }
-          : item
-      )
-    );
-
     setSaveMessage("");
     setSaveError("");
   }
@@ -203,15 +223,6 @@ export default function StackBuilder({
     stackItems.forEach((item, index) => {
       lines.push(`${index + 1}. ${item.name}`);
       lines.push(`   Category: ${item.category || "Uncategorized"}`);
-
-      if (item.benefits) {
-        lines.push(`   Benefits: ${item.benefits}`);
-      }
-
-      if (item.note.trim()) {
-        lines.push(`   Note: ${item.note.trim()}`);
-      }
-
       lines.push("");
     });
 
@@ -239,7 +250,7 @@ export default function StackBuilder({
         name: stackName,
         items: stackItems.map((item, index) => ({
           peptide_id: item.id,
-          note: item.note,
+          note: "",
           position: index,
         })),
       });
@@ -277,7 +288,7 @@ export default function StackBuilder({
           Available Peptides
         </h2>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Search by name, category, or benefit and add peptides to your stack.
+          Search by name or category and add peptides to your stack.
         </p>
 
         <div className="mt-6">
@@ -288,7 +299,7 @@ export default function StackBuilder({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, category, or benefit"
+            placeholder="Search by name or category"
             className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
           />
         </div>
@@ -303,14 +314,33 @@ export default function StackBuilder({
               const alreadyAdded = stackItems.some(
                 (item) => item.id === peptide.id
               );
+              const style = getCategoryStyle(peptide.category);
 
               return (
                 <div
                   key={peptide.id}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+                  className={`rounded-3xl border border-[var(--color-border)] ${style.bg} p-4 shadow-sm sm:p-5`}
                 >
-                  <div className="relative">
-                    <div className="absolute right-0 top-0 flex flex-col items-end gap-2">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                        {peptide.category || "Uncategorized"}
+                      </p>
+
+                      <div className="mt-1 flex items-center gap-2">
+                        <span
+                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm ring-1 ${style.ring}`}
+                        >
+                          {style.icon}
+                        </span>
+
+                        <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--color-text)] sm:text-xl">
+                          {peptide.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 sm:shrink-0">
                       <PeptideFavoriteStarButton
                         peptideId={peptide.id}
                         initialIsFavorite={favoritePeptideIdSet.has(peptide.id)}
@@ -328,20 +358,6 @@ export default function StackBuilder({
                       >
                         {alreadyAdded ? "Added" : "Add to stack"}
                       </button>
-                    </div>
-
-                    <div className="pr-36">
-                      <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                        {peptide.name}
-                      </h3>
-
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        Category: {peptide.category || "Uncategorized"}
-                      </p>
-
-                      <p className="mt-2 text-sm leading-7 text-[var(--color-muted)]">
-                        {peptide.benefits || "No benefit summary yet."}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -482,50 +498,44 @@ export default function StackBuilder({
               Add peptides from the left side to start building your stack.
             </div>
           ) : (
-            stackItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-                      Item {index + 1}
-                    </p>
-                    <h3 className="mt-1 text-lg font-semibold text-[var(--color-text)]">
-                      {item.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-[var(--color-muted)]">
-                      Category: {item.category || "Uncategorized"}
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      {item.benefits || "No benefit summary yet."}
-                    </p>
+            stackItems.map((item) => {
+              const style = getCategoryStyle(item.category);
+
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-3xl border border-[var(--color-border)] ${style.bg} p-4 shadow-sm`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                        {item.category || "Uncategorized"}
+                      </p>
+
+                      <div className="mt-1 flex items-center gap-2">
+                        <span
+                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm ring-1 ${style.ring}`}
+                        >
+                          {style.icon}
+                        </span>
+
+                        <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--color-text)]">
+                          {item.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeFromStack(item.id)}
+                      className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                    >
+                      Remove
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeFromStack(item.id)}
-                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
-                  >
-                    Remove
-                  </button>
                 </div>
-
-                <div className="mt-4">
-                  <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                    Note
-                  </label>
-                  <textarea
-                    value={item.note}
-                    onChange={(e) => updateNote(item.id, e.target.value)}
-                    placeholder="Example: compare this with another recovery peptide later"
-                    rows={3}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm"
-                  />
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </section>

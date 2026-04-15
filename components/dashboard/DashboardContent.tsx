@@ -268,7 +268,7 @@ export default async function DashboardContent() {
               Welcome back, {displayName}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-              Here’s your PEPTIQ snapshot — what needs attention, what is coming
+              Here’s your PEPT|IQ snapshot — what needs attention, what is coming
               up next, and where to jump back in.
             </p>
           </div>

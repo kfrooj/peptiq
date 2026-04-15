@@ -9,15 +9,18 @@ type SavedStack = {
   id: string;
   name: string;
   created_at: string | null;
-  stack_items: { id: string }[];
+  stack_items: {
+    id: string;
+    peptide?: {
+      category: string | null;
+    }[] | null;
+  }[];
 };
 
 type LoadedStackItem = {
   id: string;
   name: string;
   category: string | null;
-  benefits: string | null;
-  note: string;
 };
 
 type LoadedStack = {
@@ -40,7 +43,7 @@ export default async function StacksPage({
 
   const { data: peptides, error: peptidesError } = await supabase
     .from("peptides")
-    .select("id, name, category, benefits, published")
+    .select("id, name, category, published")
     .eq("published", true)
     .order("name", { ascending: true });
 
@@ -56,7 +59,19 @@ export default async function StacksPage({
   if (user) {
     const { data: savedStacksData, error: stacksError } = await supabase
       .from("stacks")
-      .select("id, name, created_at, stack_items(id)")
+      .select(
+        `
+          id,
+          name,
+          created_at,
+          stack_items (
+            id,
+            peptide:peptides (
+              category
+            )
+          )
+        `
+      )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -64,7 +79,7 @@ export default async function StacksPage({
       throw new Error(stacksError.message);
     }
 
-    savedStacks = savedStacksData ?? [];
+    savedStacks = (savedStacksData ?? []) as SavedStack[];
 
     const { data: favoriteStacks, error: favoriteStacksError } = await supabase
       .from("favorite_stacks")
@@ -102,13 +117,11 @@ export default async function StacksPage({
             name,
             stack_items (
               id,
-              note,
               position,
               peptide:peptides (
                 id,
                 name,
-                category,
-                benefits
+                category
               )
             )
           `
@@ -124,8 +137,6 @@ export default async function StacksPage({
             id: item.peptide.id,
             name: item.peptide.name,
             category: item.peptide.category,
-            benefits: item.peptide.benefits,
-            note: item.note ?? "",
           }));
 
         loadedStack = {
@@ -176,25 +187,50 @@ export default async function StacksPage({
                   ? new Date(stack.created_at).toLocaleString()
                   : "Unknown date";
 
+                const categoryCounts = (stack.stack_items ?? []).reduce<
+                  Record<string, number>
+                >((acc, item) => {
+                  const key = item.peptide?.[0]?.category || "Uncategorized";
+                  acc[key] = (acc[key] || 0) + 1;
+                  return acc;
+                }, {});
+
+                const categoryEntries = Object.entries(categoryCounts);
+
                 return (
                   <div
                     key={stack.id}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
                         <h3 className="text-lg font-semibold text-[var(--color-text)]">
                           {stack.name}
                         </h3>
+
                         <p className="mt-1 text-sm text-[var(--color-muted)]">
                           {itemCount} peptide{itemCount === 1 ? "" : "s"}
                         </p>
+
                         <p className="mt-1 text-sm text-[var(--color-muted)]">
                           Saved: {createdAt}
                         </p>
+
+                        {categoryEntries.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {categoryEntries.map(([category, count]) => (
+                              <span
+                                key={category}
+                                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]"
+                              >
+                                {category}: {count}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 sm:justify-end">
                         <StackFavoriteButton
                           stackId={stack.id}
                           initialIsFavorite={favoriteStackIds.has(stack.id)}

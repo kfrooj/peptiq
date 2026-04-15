@@ -197,17 +197,17 @@ export default async function PricingPage() {
             </p>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+       {/*   <div className="mt-4 flex flex-wrap gap-2">
             <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
               Mobile-first
-            </span>
+           </span>
             <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
               Simple v1 pricing
-            </span>
+           </span>
             <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-              One paid tier
+             One paid tier
             </span>
-          </div>
+          </div> */}
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -249,14 +249,14 @@ export default async function PricingPage() {
             ]}
             highlighted
             customPrimaryCta={
-              isPro ? (
-                <Link
-                  href="/profile"
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--color-text)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
-                >
-                  Manage subscription
-                </Link>
-              ) : (
+            isPro ? (
+  <Link
+  href="/manage-subscription"
+  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--color-text)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+>
+  Manage subscription
+</Link>
+) : (
                 <UpgradeToProButton />
               )
             }

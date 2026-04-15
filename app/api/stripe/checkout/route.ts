@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe/server";
 import { getEffectivePlanTierForUser } from "@/lib/billing/getEffectivePlanTier";
 
+type BillingProfile = {
+  plan_tier?: string | null;
+  subscription_status?: string | null;
+  stripe_customer_id?: string | null;
+};
+
 export async function POST() {
   try {
     const supabase = await createClient();
@@ -18,7 +24,22 @@ export async function POST() {
       );
     }
 
-    const effectiveTier = getEffectivePlanTierForUser(user.email);
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("plan_tier, subscription_status, stripe_customer_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      return NextResponse.json(
+        { error: profileError.message },
+        { status: 500 }
+      );
+    }
+
+    const profile = (profileData ?? undefined) as BillingProfile | undefined;
+
+    const effectiveTier = getEffectivePlanTierForUser(user.email, profile);
 
     if (effectiveTier === "pro") {
       return NextResponse.json(
@@ -46,8 +67,36 @@ export async function POST() {
 
     const stripe = getStripe();
 
+    let customerId = profile?.stripe_customer_id ?? null;
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email ?? undefined,
+        metadata: {
+          supabase_user_id: user.id,
+        },
+      });
+
+      customerId = customer.id;
+
+      const { error: updateProfileError } = await supabase
+        .from("profiles")
+        .update({
+          stripe_customer_id: customerId,
+        })
+        .eq("id", user.id);
+
+      if (updateProfileError) {
+        return NextResponse.json(
+          { error: updateProfileError.message },
+          { status: 500 }
+        );
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      customer: customerId,
       line_items: [
         {
           price: priceId,
@@ -56,7 +105,6 @@ export async function POST() {
       ],
       success_url: `${appUrl}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing/cancel`,
-      customer_email: user.email ?? undefined,
       metadata: {
         supabase_user_id: user.id,
       },

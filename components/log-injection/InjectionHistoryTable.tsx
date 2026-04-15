@@ -115,7 +115,7 @@ export default function InjectionHistoryTable({ logs }: Props) {
             Injection History
           </h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Compact, searchable history of your recent logged injections.
+            Searchable history of your recent logged injections.
           </p>
         </div>
 

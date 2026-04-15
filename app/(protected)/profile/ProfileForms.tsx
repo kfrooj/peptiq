@@ -312,43 +312,31 @@ export function InviteFriendCard({
 }: {
   shareUrl: string;
 }) {
-  const [state, setState] = useState<ActionState>({
-    status: "idle",
-    message: "",
-  });
+  const subject = encodeURIComponent("PEPT|IQ invitation");
+  const body = encodeURIComponent(
+    `I am using PEPT|IQ for my peptide protocols and think you will love it.
 
-  async function handleCopyLink() {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setState({
-        status: "success",
-        message: "Invite link copied to clipboard.",
-      });
-    } catch {
-      setState({
-        status: "error",
-        message: "Could not copy the invite link.",
-      });
-    }
-  }
+Click this link ${shareUrl} to have a look around.`
+  );
+
+  const mailtoLink = `mailto:?subject=${subject}&body=${body}`;
 
   return (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
       <div>
         <p className="font-medium text-[var(--color-text)]">Invite a friend</p>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          Share PEPTIQ with someone using your public link.
+          Send a pre-filled email invitation to a friend.
         </p>
       </div>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={handleCopyLink}
+        <a
+          href={mailtoLink}
           className="inline-flex items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90"
         >
-          Copy invite link
-        </button>
+          Invite via email
+        </a>
 
         <a
           href={shareUrl}
@@ -359,8 +347,6 @@ export function InviteFriendCard({
           Open public page
         </a>
       </div>
-
-      <FeedbackMessage state={state} />
     </div>
   );
 }

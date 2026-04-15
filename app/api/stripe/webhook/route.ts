@@ -43,24 +43,28 @@ async function updateProfileFromSubscription(
 ) {
   const supabase = createAdminClient();
 
-  console.log(`[STRIPE WEBHOOK] Updating profile from ${source}`, {
-    supabaseUserId,
-    status: subscription.status,
-    metadata: subscription.metadata,
-    periodEnd: subscription.items.data[0]?.current_period_end ?? null,
-  });
-
   const payload = {
+    stripe_customer_id:
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer?.id ?? null,
     plan_tier: getPlanTierFromSubscriptionStatus(subscription.status),
     subscription_status: mapStripeStatusToProfileStatus(subscription.status),
     subscription_current_period_end: getSubscriptionPeriodEnd(subscription),
   };
 
+  console.log(`[STRIPE WEBHOOK] Updating profile from ${source}`, {
+    supabaseUserId,
+    payload,
+  });
+
   const { data, error } = await supabase
     .from("profiles")
     .update(payload)
     .eq("id", supabaseUserId)
-    .select("id, plan_tier, subscription_status, subscription_current_period_end");
+    .select(
+      "id, stripe_customer_id, plan_tier, subscription_status, subscription_current_period_end"
+    );
 
   if (error) {
     console.error("[STRIPE WEBHOOK] Supabase update error:", error);
@@ -104,36 +108,31 @@ export async function POST(request: Request) {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-
-      console.log("[STRIPE WEBHOOK] Checkout session metadata:", session.metadata);
-      console.log(
-        "[STRIPE WEBHOOK] Checkout session subscription:",
-        session.subscription
-      );
-
       const supabaseUserId = session.metadata?.supabase_user_id;
 
       if (supabaseUserId) {
         const supabase = createAdminClient();
 
+        const payload = {
+          stripe_customer_id:
+            typeof session.customer === "string"
+              ? session.customer
+              : session.customer?.id ?? null,
+          plan_tier: "pro",
+          subscription_status: "active",
+        };
+
         const { data, error } = await supabase
           .from("profiles")
-          .update({
-            plan_tier: "pro",
-            subscription_status: "active",
-          })
+          .update(payload)
           .eq("id", supabaseUserId)
-          .select("id, plan_tier, subscription_status");
+          .select("id, stripe_customer_id, plan_tier, subscription_status");
 
         console.log("[STRIPE WEBHOOK] Checkout session profile update:", {
           supabaseUserId,
           data,
           error,
         });
-      } else {
-        console.warn(
-          "[STRIPE WEBHOOK] No supabase_user_id found on checkout session metadata."
-        );
       }
     }
 
@@ -143,23 +142,9 @@ export async function POST(request: Request) {
       event.type === "customer.subscription.deleted"
     ) {
       const subscription = event.data.object as Stripe.Subscription;
-
-      console.log(
-        "[STRIPE WEBHOOK] Subscription metadata:",
-        subscription.metadata
-      );
-      console.log(
-        "[STRIPE WEBHOOK] Subscription status:",
-        subscription.status
-      );
-
       const supabaseUserId = subscription.metadata?.supabase_user_id;
 
-      if (!supabaseUserId) {
-        console.warn(
-          "[STRIPE WEBHOOK] No supabase_user_id on subscription metadata."
-        );
-      } else {
+      if (supabaseUserId) {
         await updateProfileFromSubscription(
           supabaseUserId,
           subscription,
