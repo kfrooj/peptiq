@@ -295,7 +295,7 @@ export default async function DashboardContent() {
       body: `You currently have ${unresolvedMissedReminders.length} unresolved planned injection reminder${
         unresolvedMissedReminders.length === 1 ? "" : "s"
       }.`,
-      href: "/wellness",
+      href: "/log-injection",
     });
   }
 
@@ -552,7 +552,7 @@ export default async function DashboardContent() {
           title="Missed Reminders"
           value={String(unresolvedMissedReminders.length)}
           subtitle="Need attention"
-          href={unresolvedMissedReminders.length > 0 ? "/wellness" : undefined}
+          href={unresolvedMissedReminders.length > 0 ? "/log-injection" : undefined}
         />
 
         <StatCard
