@@ -44,7 +44,7 @@ export default function DisclaimerPage() {
         // Anonymous visitor
         if (!data.authenticated) {
           if (localAccepted) {
-  router.replace("/home");
+  router.replace("/dashboard");
   window.scrollTo({ top: 0, behavior: "auto" });
   return;
 }
@@ -56,7 +56,7 @@ export default function DisclaimerPage() {
         // Logged-in user with DB acceptance
        if (data.accepted) {
   localStorage.setItem(storageKey, "true");
-  router.replace("/home");
+  router.replace("/dashboard");
   window.scrollTo({ top: 0, behavior: "auto" });
   return;
 }
@@ -67,7 +67,7 @@ export default function DisclaimerPage() {
         if (!isMounted) return;
 
        if (localAccepted) {
-  router.replace("/home");
+  router.replace("/dashboard");
   window.scrollTo({ top: 0, behavior: "auto" });
   return;
 }
@@ -105,11 +105,11 @@ export default function DisclaimerPage() {
         }),
       });
 
-      router.replace("/home");
+      router.replace("/dashboard");
 window.scrollTo({ top: 0, behavior: "auto" });
 router.refresh();
     } catch {
-      router.replace("/home");
+      router.replace("/dashboard");
 window.scrollTo({ top: 0, behavior: "auto" });
 router.refresh();
     }
@@ -121,7 +121,7 @@ router.refresh();
       return;
     }
 
-    router.replace("/home");
+    router.replace("/dashboard");
   }
 
  if (loading) {

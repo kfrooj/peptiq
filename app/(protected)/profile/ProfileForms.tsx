@@ -23,7 +23,7 @@ function FeedbackMessage({ state }: { state: ActionState }) {
 
     const timer = setTimeout(() => {
       setVisible(false);
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [state]);
@@ -115,7 +115,7 @@ export function UpdateNotificationsForm({
   Plan reminder emails
 </p>
 <p className="mt-1 text-sm text-[var(--color-muted)]">
-  Receive scheduled reminder emails for your active injection plans.
+  Receive email reminders for your active injection plans.
 </p>
         </div>
         <input
@@ -132,7 +132,7 @@ export function UpdateNotificationsForm({
   Missed injection alerts
 </p>
 <p className="mt-1 text-sm text-[var(--color-muted)]">
-  Get alerted when a scheduled injection is missed.
+  Receive an email when a scheduled injection is missed.
 </p>
         </div>
         <input
@@ -244,16 +244,15 @@ export function ChangePasswordForm({
       </div>
 
       <div className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-muted)]">
-        Use at least 8 characters. You’ll receive a security email when your
-        password is changed.
-      </div>
+  Use at least 8 characters. We’ll send a security email after your password is updated.
+</div>
 
       <button
         type="submit"
         disabled={isPending}
         className="inline-flex rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPending ? "Updating..." : "Change Password"}
+       {isPending ? "Updating..." : "Update password"}
       </button>
 
       {clientError ? (

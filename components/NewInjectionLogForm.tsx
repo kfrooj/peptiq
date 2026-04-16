@@ -142,6 +142,9 @@ const HOTSPOTS: Hotspot[] = [
   },
 ];
 
+const fieldClassName =
+  "w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]";
+
 export default function NewInjectionLogForm({
   peptides,
   plans,
@@ -173,13 +176,20 @@ export default function NewInjectionLogForm({
   );
 
   const lockedToPlan = useMemo(() => {
-    return Boolean(initialPlanId && plans.length === 1 && plans[0]?.id === initialPlanId);
+    return Boolean(
+      initialPlanId && plans.length === 1 && plans[0]?.id === initialPlanId
+    );
   }, [initialPlanId, plans]);
 
   const selectedPeptide = useMemo(
     () => peptides.find((peptide) => peptide.id === peptideId) ?? null,
     [peptides, peptideId]
   );
+
+  const linkedPlanPeptide = useMemo(() => {
+    if (!selectedPlan) return null;
+    return peptides.find((peptide) => peptide.id === selectedPlan.peptide_id) ?? null;
+  }, [selectedPlan, peptides]);
 
   useEffect(() => {
     if (selectedPlan) {
@@ -246,14 +256,14 @@ export default function NewInjectionLogForm({
       {lockedToPlan && selectedPlan ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Plan">
-            <div className="w-full rounded-xl border bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text)]">
+            <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text)]">
               {selectedPlan.plan_name}
             </div>
           </Field>
 
           <Field label="Peptide">
-            <div className="w-full rounded-xl border bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text)]">
-              {selectedPeptide?.name ?? "Linked peptide"}
+            <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text)]">
+              {linkedPlanPeptide?.name ?? "Linked peptide"}
             </div>
           </Field>
         </div>
@@ -263,7 +273,7 @@ export default function NewInjectionLogForm({
             <select
               value={planId}
               onChange={(e) => setPlanId(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3 text-sm"
+              className={fieldClassName}
             >
               <option value="">No linked plan</option>
               {plans.map((plan) => (
@@ -272,13 +282,17 @@ export default function NewInjectionLogForm({
                 </option>
               ))}
             </select>
+            <p className="mt-2 text-xs text-[var(--color-muted)]">
+              Selecting a plan will automatically link the correct peptide.
+            </p>
           </Field>
 
           <Field label="Peptide">
             <select
               value={peptideId}
               onChange={(e) => setPeptideId(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3 text-sm"
+              className={fieldClassName}
+              disabled={Boolean(selectedPlan)}
             >
               <option value="">Select a peptide</option>
               {peptides.map((peptide) => (
@@ -296,7 +310,7 @@ export default function NewInjectionLogForm({
           type="datetime-local"
           value={injectionAt}
           onChange={(e) => setInjectionAt(e.target.value)}
-          className="w-full rounded-xl border px-4 py-3 text-sm"
+          className={fieldClassName}
         />
       </Field>
 
@@ -308,7 +322,8 @@ export default function NewInjectionLogForm({
             step="0.01"
             value={doseAmount}
             onChange={(e) => setDoseAmount(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 text-sm"
+            placeholder="Enter dose"
+            className={fieldClassName}
           />
         </Field>
 
@@ -316,7 +331,7 @@ export default function NewInjectionLogForm({
           <select
             value={doseUnit}
             onChange={(e) => setDoseUnit(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 text-sm"
+            className={fieldClassName}
           >
             <option value="mcg">mcg</option>
             <option value="mg">mg</option>
@@ -326,15 +341,17 @@ export default function NewInjectionLogForm({
         </Field>
       </div>
 
-      <div className="rounded-3xl border bg-[var(--color-surface-muted)] p-4">
+      <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
         <div className="mb-4">
-          <h3 className="font-semibold">Injection site</h3>
+          <h3 className="font-semibold text-[var(--color-text)]">
+            Injection site
+          </h3>
           <p className="text-sm text-[var(--color-muted)]">
             Tap a body area to choose the site.
           </p>
         </div>
 
-        <div className="relative mx-auto max-w-3xl overflow-hidden rounded-2xl border bg-white">
+        <div className="relative mx-auto max-w-3xl overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white">
           <div className="relative aspect-[1024/1536] w-full">
             <Image
               src="/injection-sites-body-map-v2.png"
@@ -349,7 +366,7 @@ export default function NewInjectionLogForm({
 
               return (
                 <button
-                  key={i}
+                  key={`${spot.id}-${spot.left}-${spot.top}-${i}`}
                   type="button"
                   onClick={() => setSite(spot.id)}
                   className={`absolute rounded-[40%] border-2 transition ${
@@ -364,14 +381,17 @@ export default function NewInjectionLogForm({
                     height: spot.height,
                   }}
                   aria-label={spot.label}
+                  title={spot.label}
                 />
               );
             })}
           </div>
         </div>
 
-        <div className="mt-4 text-sm">
-          Selected: <strong>{site || "None"}</strong>
+        <div className="mt-4">
+          <span className="inline-flex rounded-full bg-white px-3 py-1 text-sm font-medium text-[var(--color-text)]">
+            Selected: {site || "None"}
+          </span>
         </div>
       </div>
 
@@ -380,7 +400,8 @@ export default function NewInjectionLogForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={4}
-          className="w-full rounded-xl border px-4 py-3 text-sm"
+          placeholder="Optional notes about the injection, site reaction, or anything you want to remember."
+          className={fieldClassName}
         />
       </Field>
 
@@ -388,13 +409,22 @@ export default function NewInjectionLogForm({
         type="button"
         onClick={handleSubmit}
         disabled={isPending}
-        className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-white"
+        className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Saving..." : "Log injection"}
       </button>
 
-      {message ? <div className="text-green-600">{message}</div> : null}
-      {error ? <div className="text-red-600">{error}</div> : null}
+      {message ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {message}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -408,7 +438,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium">{label}</span>
+      <span className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+        {label}
+      </span>
       {children}
     </label>
   );

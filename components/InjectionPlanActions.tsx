@@ -11,12 +11,16 @@ type Props = {
   active: boolean;
 };
 
+type PendingAction = "toggle" | "delete" | null;
+
 export default function InjectionPlanActions({ planId, active }: Props) {
   const [error, setError] = useState("");
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleToggle() {
     setError("");
+    setPendingAction("toggle");
 
     startTransition(async () => {
       const result = await toggleInjectionPlanActive(planId, !active);
@@ -24,17 +28,20 @@ export default function InjectionPlanActions({ planId, active }: Props) {
       if (!result.success) {
         setError(result.error || "Could not update plan.");
       }
+
+      setPendingAction(null);
     });
   }
 
   function handleDelete() {
     const confirmed = window.confirm(
-      "Delete this injection plan? This cannot be undone."
+      "Delete this plan permanently?\n\nThis cannot be undone."
     );
 
     if (!confirmed) return;
 
     setError("");
+    setPendingAction("delete");
 
     startTransition(async () => {
       const result = await deleteInjectionPlan(planId);
@@ -42,8 +49,21 @@ export default function InjectionPlanActions({ planId, active }: Props) {
       if (!result.success) {
         setError(result.error || "Could not delete plan.");
       }
+
+      setPendingAction(null);
     });
   }
+
+  const toggleLabel = isPending && pendingAction === "toggle"
+    ? active
+      ? "Archiving..."
+      : "Activating..."
+    : active
+    ? "Archive plan"
+    : "Activate plan";
+
+  const deleteLabel =
+    isPending && pendingAction === "delete" ? "Deleting..." : "Delete";
 
   return (
     <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
@@ -59,7 +79,7 @@ export default function InjectionPlanActions({ planId, active }: Props) {
               : "border border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
           } ${isPending ? "cursor-not-allowed opacity-70" : ""}`}
         >
-          {isPending ? "Updating..." : active ? "Archive plan" : "Activate plan"}
+          {toggleLabel}
         </button>
 
         <button
@@ -71,12 +91,12 @@ export default function InjectionPlanActions({ planId, active }: Props) {
             isPending ? "cursor-not-allowed opacity-70" : ""
           }`}
         >
-          {isPending ? "Please wait..." : "Delete"}
+          {deleteLabel}
         </button>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:max-w-xs">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:max-w-xs">
           {error}
         </div>
       ) : null}

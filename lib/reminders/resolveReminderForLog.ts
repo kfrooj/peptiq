@@ -11,6 +11,18 @@ type ReminderCandidate = {
   reminder_for: string;
 };
 
+function startOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 export async function resolveReminderForLog(
   supabase: SupabaseClient,
   input: ResolveReminderForLogInput
@@ -21,11 +33,12 @@ export async function resolveReminderForLog(
 
   const injectionTime = new Date(input.injectionAt);
 
-  const windowStart = new Date(injectionTime);
-  windowStart.setHours(windowStart.getHours() - 24);
+  if (Number.isNaN(injectionTime.getTime())) {
+    return { resolved: false, reason: "Invalid injection time." };
+  }
 
-  const windowEnd = new Date(injectionTime);
-  windowEnd.setHours(windowEnd.getHours() + 24);
+  const dayStart = startOfDay(injectionTime);
+  const dayEnd = endOfDay(injectionTime);
 
   const { data: reminders, error } = await supabase
     .from("plan_reminders")
@@ -34,15 +47,15 @@ export async function resolveReminderForLog(
     .eq("plan_id", input.planId)
     .eq("is_completed", false)
     .in("status", ["pending", "sent"])
-    .gte("reminder_for", windowStart.toISOString())
-    .lte("reminder_for", windowEnd.toISOString());
+    .gte("reminder_for", dayStart.toISOString())
+    .lte("reminder_for", dayEnd.toISOString());
 
   if (error) {
     throw error;
   }
 
   if (!reminders || reminders.length === 0) {
-    return { resolved: false, reason: "No matching reminder found." };
+    return { resolved: false, reason: "No matching reminder found for this day." };
   }
 
   const closestReminder = reminders.reduce(

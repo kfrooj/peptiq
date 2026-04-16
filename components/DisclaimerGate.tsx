@@ -7,7 +7,7 @@ const DISCLAIMER_VERSION = "v1";
 const STORAGE_KEY = `peptiq_disclaimer_accepted_${DISCLAIMER_VERSION}`;
 
 const ANONYMOUS_GATED_PUBLIC_PATHS = [
-  "/home",
+  "/dashboard",
   "/peptides",
   "/calculator",
   "/login",
@@ -28,7 +28,7 @@ export default function DisclaimerGate() {
 
    if (pathname === "/") {
   if (accepted) {
-    router.replace("/home");
+    router.replace("/dashboard");
   } else {
     router.replace("/disclaimer");
   }

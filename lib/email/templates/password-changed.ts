@@ -1,42 +1,51 @@
+import { renderBaseEmailLayout } from "./_components/baseEmailLayout";
+
 type PasswordChangedEmailParams = {
   appName?: string;
-  supportEmail?: string;
+  supportEmail: string;
 };
 
 export function getPasswordChangedEmail({
   appName = "PEPTIQ",
-  supportEmail = "support@peptiq.uk",
-}: PasswordChangedEmailParams = {}) {
+  supportEmail,
+}: PasswordChangedEmailParams) {
   const subject = `Your ${appName} password was changed`;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-      <div style="max-width: 560px; margin: 0 auto; padding: 24px;">
-        <h1 style="font-size: 22px; margin-bottom: 16px;">Your password was changed</h1>
-        <p style="margin: 0 0 12px;">
-          This is a security alert to let you know that your ${appName} password was changed.
-        </p>
-        <p style="margin: 0 0 12px;">
-          If this was you, no action is needed.
-        </p>
-        <p style="margin: 0 0 12px;">
-          If this was not you, please reset your password immediately and contact support at
-          <a href="mailto:${supportEmail}">${supportEmail}</a>.
-        </p>
-        <p style="margin-top: 24px; color: #6b7280; font-size: 14px;">
-          This email was sent automatically for account security.
-        </p>
-      </div>
+  const bodyHtml = `
+    <p>Your password was successfully updated.</p>
+
+    <div style="margin:16px 0;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+      <div><strong>Account:</strong> Your ${appName} login</div>
+      <div><strong>Status:</strong> Password updated</div>
     </div>
+
+    <p>
+      If you made this change, no further action is needed.
+    </p>
+
+    <p>
+      If this was not you, contact support immediately at
+      <a href="mailto:${supportEmail}" style="color:#2563eb;text-decoration:none;">${supportEmail}</a>.
+    </p>
   `;
 
+  const html = renderBaseEmailLayout({
+    title: "Your password was changed",
+    intro: "This is a security confirmation for your PEPTIQ account.",
+    bodyHtml,
+    footerNote:
+      "If you did not expect this change, contact support as soon as possible.",
+  });
+
   const text = [
-    `Your ${appName} password was changed.`,
+    "Your password was successfully updated.",
     "",
-    `If this was you, no action is needed.`,
-    `If this was not you, please reset your password immediately and contact support at ${supportEmail}.`,
+    `Account: Your ${appName} login`,
+    "Status: Password updated",
     "",
-    `This email was sent automatically for account security.`,
+    "If you made this change, no further action is needed.",
+    "",
+    `If this was not you, contact support immediately at ${supportEmail}.`,
   ].join("\n");
 
   return { subject, html, text };

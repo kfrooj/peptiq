@@ -151,16 +151,15 @@ export default async function LogInjectionContent({
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-sm font-medium text-amber-900">
-          Personal reference logging only. This feature does not provide medical
-          advice or treatment guidance.
-        </p>
-      </div>
+      <div className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+  <p className="text-sm font-medium text-[var(--color-text)]">
+    Personal reference logging only. PEPT|IQ does not provide medical advice or treatment guidance.
+  </p>
+</div>
 
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text)]">
-          Injection Logging
+          Log Injection
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
           Log injections, track site rotation, and keep a complete history in a
@@ -171,12 +170,12 @@ export default async function LogInjectionContent({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">
-              Log New Injection
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Use the body map below in the form to choose the injection site.
-            </p>
+           <h2 className="text-xl font-semibold text-[var(--color-text)]">
+  Log Injection
+</h2>
+<p className="mt-1 text-sm text-[var(--color-muted)]">
+  Complete the form below and use the body map to choose the injection site.
+</p>
           </div>
 
           {lockedToPlan && selectedPlan ? (

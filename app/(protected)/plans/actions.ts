@@ -42,8 +42,20 @@ type BillingProfile = {
 
 type PlanTier = "free" | "pro";
 
+const ALLOWED_DOSE_UNITS = new Set(["mcg", "mg", "IU", "mL"]);
+const ALLOWED_FREQUENCY_TYPES = new Set(["daily", "weekly", "every_x_days"]);
+
 function getMaxActivePlans(planTier: PlanTier): number | null {
   return planTier === "pro" ? null : 2;
+}
+
+function isValidDateString(value: string) {
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime());
+}
+
+function isValidTimeString(value: string) {
+  return /^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/.test(value);
 }
 
 async function getBillingProfile(
@@ -124,6 +136,13 @@ function getReadableErrorMessage(error: unknown): string {
   }
 }
 
+function revalidatePlanRelatedPaths() {
+  revalidatePath("/plans");
+  revalidatePath("/dashboard");
+  revalidatePath("/wellness");
+  revalidatePath("/log-injection");
+}
+
 export async function createInjectionPlan(input: CreateInjectionPlanInput) {
   const supabase = await createClient();
 
@@ -147,11 +166,34 @@ export async function createInjectionPlan(input: CreateInjectionPlanInput) {
     return { success: false, error: "Dose amount must be greater than 0." };
   }
 
-  if (!input.startDate) {
+  if (!input.doseUnit || !ALLOWED_DOSE_UNITS.has(input.doseUnit)) {
+    return { success: false, error: "Please select a valid dose unit." };
+  }
+
+  if (!input.frequencyType || !ALLOWED_FREQUENCY_TYPES.has(input.frequencyType)) {
+    return { success: false, error: "Please select a valid frequency." };
+  }
+
+  if (!input.startDate || !isValidDateString(input.startDate)) {
     return { success: false, error: "Start date is required." };
   }
 
-  if (!input.defaultTime) {
+  if (input.endDate && !isValidDateString(input.endDate)) {
+    return { success: false, error: "Please enter a valid end date." };
+  }
+
+  if (
+    input.startDate &&
+    input.endDate &&
+    new Date(input.endDate).getTime() < new Date(input.startDate).getTime()
+  ) {
+    return {
+      success: false,
+      error: "End date cannot be earlier than the start date.",
+    };
+  }
+
+  if (!input.defaultTime || !isValidTimeString(input.defaultTime)) {
     return { success: false, error: "Injection time is required." };
   }
 
@@ -236,7 +278,12 @@ export async function createInjectionPlan(input: CreateInjectionPlanInput) {
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("Create injection plan error:", error);
+
+    return {
+      success: false,
+      error: "Could not create plan. Please try again.",
+    };
   }
 
   try {
@@ -254,7 +301,7 @@ export async function createInjectionPlan(input: CreateInjectionPlanInput) {
     };
   }
 
-  revalidatePath("/plans");
+  revalidatePlanRelatedPaths();
 
   return { success: true };
 }
@@ -274,6 +321,22 @@ export async function deleteInjectionPlan(planId: string) {
     return { success: false, error: "Plan ID is required." };
   }
 
+  const { data: existingPlan, error: existingPlanError } = await supabase
+    .from("injection_plans")
+    .select("id")
+    .eq("id", planId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingPlanError) {
+    console.error("Plan lookup before delete error:", existingPlanError);
+    return { success: false, error: "Could not verify the plan." };
+  }
+
+  if (!existingPlan) {
+    return { success: false, error: "Plan not found." };
+  }
+
   const { error } = await supabase
     .from("injection_plans")
     .delete()
@@ -281,10 +344,15 @@ export async function deleteInjectionPlan(planId: string) {
     .eq("user_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("Delete injection plan error:", error);
+
+    return {
+      success: false,
+      error: "Could not delete plan.",
+    };
   }
 
-  revalidatePath("/plans");
+  revalidatePlanRelatedPaths();
 
   return { success: true };
 }
@@ -322,7 +390,8 @@ export async function toggleInjectionPlanActive(
         .maybeSingle();
 
       if (currentPlanError) {
-        return { success: false, error: currentPlanError.message };
+        console.error("Current plan lookup error:", currentPlanError);
+        return { success: false, error: "Could not verify the plan." };
       }
 
       if (!currentPlan) {
@@ -373,7 +442,12 @@ export async function toggleInjectionPlanActive(
     .single();
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("Toggle injection plan error:", error);
+
+    return {
+      success: false,
+      error: `Could not ${nextActive ? "activate" : "archive"} plan.`,
+    };
   }
 
   try {
@@ -391,7 +465,7 @@ export async function toggleInjectionPlanActive(
     };
   }
 
-  revalidatePath("/plans");
+  revalidatePlanRelatedPaths();
 
   return { success: true };
 }
@@ -422,12 +496,15 @@ export async function markReminderCompleted(reminderId: string) {
     .eq("user_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("Mark reminder completed error:", error);
+
+    return {
+      success: false,
+      error: "Could not mark reminder as completed.",
+    };
   }
 
-  revalidatePath("/plans");
-  revalidatePath("/wellness");
-  revalidatePath("/dashboard");
+  revalidatePlanRelatedPaths();
 
   return { success: true };
 }
@@ -454,12 +531,15 @@ export async function deleteReminder(reminderId: string) {
     .eq("user_id", user.id);
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("Delete reminder error:", error);
+
+    return {
+      success: false,
+      error: "Could not delete reminder.",
+    };
   }
 
-  revalidatePath("/plans");
-  revalidatePath("/wellness");
-  revalidatePath("/dashboard");
+  revalidatePlanRelatedPaths();
 
   return { success: true };
 }

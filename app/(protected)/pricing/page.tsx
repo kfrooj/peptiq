@@ -260,8 +260,7 @@ export default async function PricingPage() {
                 <UpgradeToProButton />
               )
             }
-            secondaryLabel="See your profile"
-            secondaryHref="/profile"
+           
           />
         </section>
 
@@ -380,33 +379,11 @@ export default async function PricingPage() {
                   <span className="text-lg font-semibold text-[var(--color-text)]">
                     {isPro ? "Pro" : "Free"}
                   </span>
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      isPro
-                        ? "bg-blue-50 text-[var(--color-accent)]"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {isPro ? "Pro" : "Free"}
-                  </span>
+                 
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  href="/profile"
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
-                >
-                  Back to Profile
-                </Link>
-
-                <Link
-                  href="/plans"
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
-                >
-                  Back to Plans
-                </Link>
-              </div>
+           
             </div>
 
             <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">

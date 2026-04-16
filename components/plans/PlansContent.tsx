@@ -168,10 +168,12 @@ function getTrendSummary(points: TrendPoint[]) {
 }
 
 function formatTimeLabel(value: string) {
-  return new Date(value).toLocaleTimeString([], {
-    hour: "numeric",
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
     minute: "2-digit",
-  });
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 function formatDate(value: string) {
@@ -182,6 +184,18 @@ function formatDate(value: string) {
   });
 }
 
+function formatDisplayTime(value: string) {
+  const [hours, minutes] = value.split(":");
+  if (!hours || !minutes) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(`1970-01-01T${hours}:${minutes}:00Z`));
+}
+
 function formatFrequencyLabel(
   frequencyType: string,
   frequencyValue: number | null
@@ -190,7 +204,17 @@ function formatFrequencyLabel(
     return `Every ${frequencyValue} days`;
   }
 
-  return frequencyType.replaceAll("_", " ");
+  if (frequencyType === "daily") {
+    return "Daily";
+  }
+
+  if (frequencyType === "weekly") {
+    return "Weekly";
+  }
+
+  return frequencyType
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default async function PlansContent() {
@@ -370,7 +394,7 @@ export default async function PlansContent() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)] sm:text-3xl">
-              Injection Plans
+              Plans
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
               Manage active plans, track adherence, and keep your next step clear.
@@ -400,10 +424,10 @@ export default async function PlansContent() {
               </p>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
                 {isAtLimit
-                  ? "You’ve hit the Free plan limit. Upgrade to Pro for unlimited active plans, or archive an existing plan first."
+                  ? "You’ve reached the Free plan limit. Upgrade to Pro for unlimited active plans, or archive an existing plan first."
                   : isNearLimit
-                    ? "You’re close to the Free plan limit. Upgrade to Pro for unlimited active plans."
-                    : "Free includes up to 2 active plans. Upgrade to Pro for unlimited active plans and fuller tracking."}
+                  ? "You’re close to the Free plan limit. Upgrade to Pro for unlimited active plans."
+                  : "Free includes up to 2 active plans. Upgrade to Pro for unlimited active plans and expanded tracking."}
               </p>
             </div>
 
@@ -422,7 +446,7 @@ export default async function PlansContent() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-                Create New Plan
+                Create Plan
               </h2>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
                 Set up a new schedule and reminder pattern.
@@ -467,7 +491,7 @@ export default async function PlansContent() {
           <div className="mt-4 grid gap-4">
             {!plans.length ? (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
-                No injection plans yet.
+                No plans yet. Create your first plan to start reminders and adherence tracking.
               </div>
             ) : (
               plans.map((plan) => {
@@ -573,7 +597,7 @@ export default async function PlansContent() {
                               Time
                             </p>
                             <p className="mt-0.5 text-sm text-[var(--color-text)]">
-                              {plan.default_time}
+                              {formatDisplayTime(plan.default_time)}
                             </p>
                           </div>
                         ) : null}
@@ -598,14 +622,14 @@ export default async function PlansContent() {
                           <span>{adherence}%</span>
                         </div>
 
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                          {stats.total} total
+                        </span>
                         <span className="rounded-full bg-green-50 px-2 py-1 text-xs text-green-700">
                           {stats.completed} completed
                         </span>
                         <span className="rounded-full bg-red-50 px-2 py-1 text-xs text-red-700">
                           {stats.missed} missed
-                        </span>
-                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                          {stats.total} total
                         </span>
                       </div>
 

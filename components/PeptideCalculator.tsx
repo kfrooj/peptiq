@@ -245,6 +245,36 @@ export default function PeptideCalculator({
               ))}
             </select>
           </div>
+
+          {results ? (
+            <>
+              <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Quick summary
+                </p>
+                <div className="mt-3 space-y-1 text-sm text-[var(--color-muted)]">
+                  <p>
+                    {results.vialMg} mg mixed with {results.mixingMl} mL creates a
+                    concentration of {results.concentrationMcgPerMl} mcg/mL.
+                  </p>
+                  <p>
+                    A {results.desiredMcg} mcg dose requires{" "}
+                    {results.requiredVolumeMl} mL, which equals {results.requiredIU} IU.
+                  </p>
+                  <p>
+                    This vial provides about {results.dosesPerVial} doses at that
+                    amount.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
+                <p>1 mg = 1000 mcg</p>
+                <p>1 mL = 100 IU</p>
+                <p>1 IU = 0.01 mL</p>
+              </div>
+            </>
+          ) : null}
         </div>
       </section>
 
@@ -324,31 +354,6 @@ export default function PeptideCalculator({
                 The required volume fits within the selected syringe size.
               </div>
             )}
-
-            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
-              <p className="text-sm font-medium text-[var(--color-text)]">
-                Quick summary
-              </p>
-              <div className="mt-3 space-y-1 text-sm text-[var(--color-muted)]">
-                <p>
-                  {results.vialMg} mg mixed with {results.mixingMl} mL creates a
-                  concentration of {results.concentrationMcgPerMl} mcg/mL.
-                </p>
-                <p>
-                  A {results.desiredMcg} mcg dose requires{" "}
-                  {results.requiredVolumeMl} mL, which equals {results.requiredIU} IU.
-                </p>
-                <p>
-                  This vial provides about {results.dosesPerVial} doses at that amount.
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
-              <p>1 mg = 1000 mcg</p>
-              <p>1 mL = 100 IU</p>
-              <p>1 IU = 0.01 mL</p>
-            </div>
           </div>
         )}
       </section>
@@ -380,19 +385,16 @@ function SyringeGraphic({
   const clampedIU = Math.max(0, Math.min(requiredIU, safeCapacity));
   const fillPercent = clampedIU / safeCapacity;
 
-  // Visual layout numbers
   const barrelLeft = 36;
   const barrelTop = 18;
   const barrelWidth = 360;
   const barrelHeight = 44;
   const barrelRight = barrelLeft + barrelWidth;
 
-  // Stopper position stays inside the barrel
   const stopperWidth = 10;
   const stopperLeft =
     barrelLeft + fillPercent * barrelWidth - stopperWidth / 2;
 
-  // Tick setup
   const majorTickCount = 10;
   const minorTicksPerSection = 4;
 
@@ -428,7 +430,6 @@ function SyringeGraphic({
           </filter>
         </defs>
 
-        {/* Needle */}
         <line
           x1={barrelRight + 18}
           y1={barrelTop + barrelHeight / 2}
@@ -439,7 +440,6 @@ function SyringeGraphic({
           strokeLinecap="round"
         />
 
-        {/* Needle hub */}
         <rect
           x={barrelRight + 4}
           y={barrelTop + 14}
@@ -451,7 +451,6 @@ function SyringeGraphic({
           strokeWidth="1"
         />
 
-        {/* Plunger handle */}
         <rect
           x="4"
           y={barrelTop + 10}
@@ -463,7 +462,6 @@ function SyringeGraphic({
           strokeWidth="1"
         />
 
-        {/* Plunger rod */}
         <rect
           x="24"
           y={barrelTop + 18}
@@ -473,7 +471,6 @@ function SyringeGraphic({
           fill="#94a3b8"
         />
 
-        {/* Barrel */}
         <rect
           x={barrelLeft}
           y={barrelTop}
@@ -486,7 +483,6 @@ function SyringeGraphic({
           filter="url(#softShadow)"
         />
 
-        {/* Liquid */}
         <rect
           x={barrelLeft + 2}
           y={barrelTop + 2}
@@ -496,7 +492,6 @@ function SyringeGraphic({
           fill="url(#liquidFill)"
         />
 
-        {/* Liquid highlight */}
         {fillPercent > 0 ? (
           <rect
             x={barrelLeft + 10}
@@ -509,7 +504,6 @@ function SyringeGraphic({
           />
         ) : null}
 
-        {/* Stopper */}
         <rect
           x={Math.max(barrelLeft, Math.min(stopperLeft, barrelRight - stopperWidth))}
           y={barrelTop + 3}
@@ -519,7 +513,6 @@ function SyringeGraphic({
           fill="#111827"
         />
 
-        {/* Major ticks and labels */}
         {Array.from({ length: majorTickCount + 1 }).map((_, index) => {
           const x = barrelLeft + (barrelWidth / majorTickCount) * index;
           const labelValue = Math.round((safeCapacity / majorTickCount) * index);
@@ -547,9 +540,9 @@ function SyringeGraphic({
           );
         })}
 
-        {/* Minor ticks */}
         {Array.from({ length: majorTickCount }).map((_, sectionIndex) => {
-          const sectionStart = barrelLeft + (barrelWidth / majorTickCount) * sectionIndex;
+          const sectionStart =
+            barrelLeft + (barrelWidth / majorTickCount) * sectionIndex;
           const sectionWidth = barrelWidth / majorTickCount;
 
           return Array.from({ length: minorTicksPerSection }).map((_, minorIndex) => {

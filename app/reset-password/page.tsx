@@ -27,7 +27,7 @@ export default function ResetPasswordPage() {
       } = await supabase.auth.getSession();
 
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage("We could not verify your reset session. Please request a new reset link.");
         setLoadingSession(false);
         return;
       }
@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
     setErrorMessage(null);
 
     if (password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters.");
+      setErrorMessage("Use at least 8 characters for your password.");
       return;
     }
 
@@ -84,7 +84,7 @@ export default function ResetPasswordPage() {
 
     if (user?.email) {
       try {
-        await fetch("/api/email/password-changed", {
+        const response = await fetch("/api/email/password-changed", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -93,36 +93,43 @@ export default function ResetPasswordPage() {
             email: user.email,
           }),
         });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          console.error("Password changed email failed:", data ?? response.statusText);
+        }
       } catch (emailError) {
         console.error("Password reset email trigger error:", emailError);
       }
     }
 
-    setMessage("Password updated successfully. Redirecting to home...");
+    setMessage("Password updated successfully. Redirecting to dashboard...");
     setPassword("");
     setConfirmPassword("");
     setSaving(false);
 
     setTimeout(() => {
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     }, 1500);
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-12">
+    <main className="mx-auto max-w-md px-4 py-8 sm:px-6 sm:py-12">
       <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm sm:rounded-3xl sm:p-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">
-          Reset Password
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Enter a new password for your account.
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">
+            Reset password
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Enter a new password for your account.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="block">
             <span className="text-sm font-medium text-[var(--color-text)]">
-              New Password
+              New password
             </span>
             <input
               type="password"
@@ -131,13 +138,13 @@ export default function ResetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loadingSession || !sessionReady || saving}
-              className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-blue-500 disabled:bg-gray-50"
+              className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </label>
 
           <label className="block">
             <span className="text-sm font-medium text-[var(--color-text)]">
-              Confirm New Password
+              Confirm new password
             </span>
             <input
               type="password"
@@ -146,46 +153,54 @@ export default function ResetPasswordPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loadingSession || !sessionReady || saving}
-              className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-blue-500 disabled:bg-gray-50"
+              className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </label>
 
-          {loadingSession && (
-            <p className="text-sm text-[var(--color-muted)]">
+          <p className="text-xs leading-5 text-[var(--color-muted)]">
+            Use at least 8 characters for your password.
+          </p>
+
+          {loadingSession ? (
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-muted)]">
               Preparing secure reset session...
-            </p>
-          )}
-
-          {errorMessage && (
-            <div className="space-y-2">
-              <p className="text-sm text-red-600">{errorMessage}</p>
-
-              <Link
-                href="/forgot-password"
-                className="inline-block text-sm text-blue-600 hover:text-blue-500"
-              >
-                Request a new reset link
-              </Link>
-
-              <br />
-
-              <Link
-                href="/login"
-                className="inline-block text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
-              >
-                Back to login
-              </Link>
             </div>
-          )}
+          ) : null}
 
-          {message && <p className="text-sm text-green-600">{message}</p>}
+          {errorMessage ? (
+            <div className="space-y-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 text-sm text-rose-700">
+              <p>{errorMessage}</p>
+
+              <div className="flex flex-col gap-2">
+                <Link
+                  href="/forgot-password"
+                  className="text-[var(--color-accent)] transition hover:opacity-80"
+                >
+                  Request a new reset link
+                </Link>
+
+                <Link
+                  href="/login"
+                  className="text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
+                >
+                  Back to login
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
+          {message ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {message}
+            </div>
+          ) : null}
 
           <button
             type="submit"
             disabled={saving || loadingSession || !sessionReady}
-            className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-60"
+            className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Updating..." : "Update Password"}
+            {saving ? "Updating..." : "Update password"}
           </button>
         </form>
       </div>

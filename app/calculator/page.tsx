@@ -1,14 +1,7 @@
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
 import CalculatorPageClient from "../../components/CalculatorPageClient";
 
 async function CalculatorPageContent() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   return (
     <main className="min-h-screen bg-[var(--color-background)]">
       <section className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">

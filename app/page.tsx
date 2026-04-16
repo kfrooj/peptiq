@@ -16,7 +16,7 @@ export default function IndexPage() {
     window.scrollTo({ top: 0, behavior: "auto" });
 
     if (accepted) {
-      router.replace("/home");
+      router.replace("/dashboard");
     } else {
       router.replace("/disclaimer");
     }

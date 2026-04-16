@@ -64,7 +64,7 @@ export async function favoritePeptide(peptideId: string) {
   }
 
   revalidatePath("/dashboard");
-  revalidatePath("/stacks");
+  revalidatePath("/peptides");
 
   return { success: true };
 }
@@ -91,7 +91,7 @@ export async function unfavoritePeptide(peptideId: string) {
   }
 
   revalidatePath("/dashboard");
-  revalidatePath("/stacks");
+  revalidatePath("/peptides");
 
   return { success: true };
 }

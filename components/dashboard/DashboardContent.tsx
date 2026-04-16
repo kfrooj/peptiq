@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 type ReminderRow = {
@@ -36,7 +35,26 @@ type PlanRow = {
 type ProfileRow = {
   id: string;
   name: string | null;
-  disclaimer_accepted?: boolean | null;
+};
+
+type FavoritePeptideIdRow = {
+  peptide_id: string;
+};
+
+type FavoriteStackIdRow = {
+  stack_id: string;
+};
+
+type PeptideRow = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string | null;
+};
+
+type StackRow = {
+  id: string;
+  name: string;
 };
 
 function formatLocalDate(value: string | Date) {
@@ -78,7 +96,7 @@ export default async function DashboardContent() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    throw new Error("DashboardContent requires an authenticated user.");
   }
 
   const now = new Date();
@@ -88,10 +106,12 @@ export default async function DashboardContent() {
     { data: logs, error: logsError },
     { data: plans, error: plansError },
     { data: reminders, error: remindersError },
+    favoritePeptideIdsResult,
+    favoriteStackIdsResult,
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, name, disclaimer_accepted")
+      .select("id, name")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
@@ -135,6 +155,18 @@ export default async function DashboardContent() {
         `
       )
       .eq("user_id", user.id),
+    supabase
+      .from("favorite_peptides")
+      .select("peptide_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("favorite_stacks")
+      .select("stack_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(4),
   ]);
 
   if (profileError) throw new Error(profileError.message);
@@ -143,10 +175,6 @@ export default async function DashboardContent() {
   if (remindersError) throw new Error(remindersError.message);
 
   const profileData = profile as ProfileRow | null;
-
-  if (!profileData?.disclaimer_accepted) {
-    redirect("/disclaimer");
-  }
 
   const displayName =
     profileData?.name?.trim() || user.email?.split("@")[0] || "there";
@@ -172,6 +200,47 @@ export default async function DashboardContent() {
     status: row.status ?? null,
     plan: Array.isArray(row.plan) ? row.plan[0] ?? null : row.plan ?? null,
   }));
+
+  const favoritePeptideIds = (
+    (favoritePeptideIdsResult.data ?? []) as FavoritePeptideIdRow[]
+  )
+    .map((item) => item.peptide_id)
+    .filter(Boolean);
+
+  const favoriteStackIds = (
+    (favoriteStackIdsResult.data ?? []) as FavoriteStackIdRow[]
+  )
+    .map((item) => item.stack_id)
+    .filter(Boolean);
+
+  const [peptidesResult, stacksResult] = await Promise.all([
+    favoritePeptideIds.length > 0
+      ? supabase
+          .from("peptides")
+          .select("id, name, slug, category")
+          .in("id", favoritePeptideIds)
+      : Promise.resolve({ data: [] as PeptideRow[], error: null }),
+
+    favoriteStackIds.length > 0
+      ? supabase.from("stacks").select("id, name").in("id", favoriteStackIds)
+      : Promise.resolve({ data: [] as StackRow[], error: null }),
+  ]);
+
+  const peptidesById = new Map(
+    ((peptidesResult.data ?? []) as PeptideRow[]).map((item) => [item.id, item])
+  );
+
+  const stacksById = new Map(
+    ((stacksResult.data ?? []) as StackRow[]).map((item) => [item.id, item])
+  );
+
+  const favoritePeptides = favoritePeptideIds
+    .map((id) => peptidesById.get(id))
+    .filter((item): item is PeptideRow => Boolean(item));
+
+  const favoriteStacks = favoriteStackIds
+    .map((id) => stacksById.get(id))
+    .filter((item): item is StackRow => Boolean(item));
 
   const isFirstTimeState = !typedPlans.length && !typedLogs.length;
 
@@ -268,8 +337,7 @@ export default async function DashboardContent() {
               Welcome back, {displayName}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-              Here’s your PEPT|IQ snapshot — what needs attention, what is coming
-              up next, and where to jump back in.
+              Your latest activity, reminders, and next steps in one place.
             </p>
           </div>
 
@@ -278,8 +346,8 @@ export default async function DashboardContent() {
               adherenceTone === "green"
                 ? "bg-green-50 text-green-700"
                 : adherenceTone === "amber"
-                  ? "bg-amber-50 text-amber-700"
-                  : "bg-red-50 text-red-700"
+                ? "bg-amber-50 text-amber-700"
+                : "bg-red-50 text-red-700"
             }`}
           >
             60-day adherence {adherence}%
@@ -318,46 +386,6 @@ export default async function DashboardContent() {
         </section>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="Active Plans"
-          value={String(typedPlans.length)}
-          subtitle="Currently running"
-        />
-
-        <StatCard
-          title="Missed Reminders"
-          value={String(unresolvedMissedReminders.length)}
-          subtitle="Need attention"
-          href={unresolvedMissedReminders.length > 0 ? "/wellness" : undefined}
-        />
-
-        <StatCard
-          title="Last Injection"
-          value={lastInjection ? formatLocalDate(lastInjection) : "—"}
-          subtitle={
-            daysSinceLast !== null
-              ? `${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago`
-              : "No logged injections yet"
-          }
-        />
-
-        <StatCard
-          title="Next Reminder"
-          value={
-            nextUnresolvedReminder
-              ? formatLocalDate(nextUnresolvedReminder.reminder_for)
-              : "—"
-          }
-          subtitle={
-            nextUnresolvedReminder
-              ? `${nextUnresolvedReminder.plan?.plan_name || "Planned injection"}`
-              : "No upcoming unresolved reminders"
-          }
-          href={nextUnresolvedReminder ? nextReminderHref : undefined}
-        />
-      </section>
-
       <section className="mt-5 grid gap-4 lg:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
           <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
@@ -378,7 +406,8 @@ export default async function DashboardContent() {
                     {nextUnresolvedReminder.plan?.plan_name || "Planned injection"}
                   </p>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Scheduled for {formatLocalDateTime(nextUnresolvedReminder.reminder_for)}
+                    Scheduled for{" "}
+                    {formatLocalDateTime(nextUnresolvedReminder.reminder_for)}
                   </p>
                 </div>
 
@@ -416,7 +445,8 @@ export default async function DashboardContent() {
                   </p>
                   <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
                     You do not have any upcoming unresolved reminders at the
-                    moment, but you can still log an injection or review your progress.
+                    moment, but you can still log an injection or review your
+                    progress.
                   </p>
                 </div>
 
@@ -453,8 +483,8 @@ export default async function DashboardContent() {
                     Start by creating your first plan
                   </p>
                   <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                    Plans power reminders, adherence tracking, and the rest of your
-                    dashboard experience.
+                    Plans power reminders, adherence tracking, and the rest of
+                    your dashboard experience.
                   </p>
                 </div>
 
@@ -509,6 +539,48 @@ export default async function DashboardContent() {
             )}
           </div>
         </section>
+      </section>
+
+      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Active Plans"
+          value={String(typedPlans.length)}
+          subtitle="Currently running"
+        />
+
+        <StatCard
+          title="Missed Reminders"
+          value={String(unresolvedMissedReminders.length)}
+          subtitle="Need attention"
+          href={unresolvedMissedReminders.length > 0 ? "/wellness" : undefined}
+        />
+
+        <StatCard
+          title="Last Injection"
+          value={lastInjection ? formatLocalDate(lastInjection) : "—"}
+          subtitle={
+            daysSinceLast !== null
+              ? `${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago`
+              : "No logged injections yet"
+          }
+        />
+
+        <StatCard
+          title="Next Reminder"
+          value={
+            nextUnresolvedReminder
+              ? formatLocalDate(nextUnresolvedReminder.reminder_for)
+              : "—"
+          }
+          subtitle={
+            nextUnresolvedReminder
+              ? `${
+                  nextUnresolvedReminder.plan?.plan_name || "Planned injection"
+                }`
+              : "No upcoming unresolved reminders"
+          }
+          href={nextUnresolvedReminder ? nextReminderHref : undefined}
+        />
       </section>
 
       <section className="mt-5 grid gap-4 sm:mt-6 lg:grid-cols-2">
@@ -593,43 +665,99 @@ export default async function DashboardContent() {
       </section>
 
       <section className="mt-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
-        <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-          Quick Status
-        </h2>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">
-          A simple summary of where your tracking stands.
-        </p>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
+              Favorites
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Quick access to your saved peptides and stacks.
+            </p>
+          </div>
 
-        <div className="mt-4 grid gap-3">
-          <StatusRow
-            label="Last logged injection"
-            value={
-              lastInjection
-                ? formatLocalDateTime(lastInjection)
-                : "No injections logged yet"
-            }
-          />
-          <StatusRow
-            label="Next unresolved reminder"
-            value={
-              nextUnresolvedReminder
-                ? `${nextUnresolvedReminder.plan?.plan_name || "Plan"} · ${formatLocalDateTime(
-                    nextUnresolvedReminder.reminder_for
-                  )}`
-                : "No upcoming unresolved reminders"
-            }
-            href={nextUnresolvedReminder ? nextReminderHref : undefined}
-          />
-          <StatusRow
-            label="Unresolved reminders"
-            value={`${unresolvedMissedReminders.length} reminder${
-              unresolvedMissedReminders.length === 1 ? "" : "s"
-            }`}
-          />
-          <StatusRow
-            label="Completed reminders"
-            value={`${completedReminders} of ${totalReminders || 0}`}
-          />
+          <Link
+            href="/profile"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+          >
+            Manage Favorites
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[var(--color-text)]">
+                Favorite Peptides
+              </h3>
+              <span className="text-sm text-[var(--color-muted)]">
+                {favoritePeptides.length}
+              </span>
+            </div>
+
+            {favoritePeptides.length > 0 ? (
+              <div className="space-y-2.5">
+                {favoritePeptides.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
+                  >
+                    <Link
+                      href={`/peptides/${item.slug}`}
+                      className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
+                    >
+                      <p className="font-medium text-[var(--color-text)]">
+                        {item.name}
+                      </p>
+                      {item.category ? (
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          {item.category}
+                        </p>
+                      ) : null}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-5 text-sm text-[var(--color-muted)]">
+                No favorite peptides yet.
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[var(--color-text)]">
+                Favorite Stacks
+              </h3>
+              <span className="text-sm text-[var(--color-muted)]">
+                {favoriteStacks.length}
+              </span>
+            </div>
+
+            {favoriteStacks.length > 0 ? (
+              <div className="space-y-2.5">
+                {favoriteStacks.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
+                  >
+                    <Link
+                      href="/stacks"
+                      className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
+                    >
+                      <p className="font-medium text-[var(--color-text)]">
+                        {item.name}
+                      </p>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-5 text-sm text-[var(--color-muted)]">
+                No favorite stacks yet.
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </main>
@@ -701,40 +829,6 @@ function ActionCard({
       <div className="mt-3 text-sm font-medium text-[var(--color-accent)]">
         Open →
       </div>
-    </Link>
-  );
-}
-
-function StatusRow({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string;
-  href?: string;
-}) {
-  const content = (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <span className="text-sm font-medium text-[var(--color-text)]">
-          {label}
-        </span>
-        <span className="break-words text-sm leading-6 text-[var(--color-muted)] sm:text-right">
-          {value}
-        </span>
-      </div>
-    </div>
-  );
-
-  if (!href) return content;
-
-  return (
-    <Link
-      href={href}
-      className="block transition hover:-translate-y-0.5 hover:shadow-sm"
-    >
-      {content}
     </Link>
   );
 }

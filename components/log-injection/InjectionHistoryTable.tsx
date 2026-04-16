@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type InjectionHistoryRow = {
@@ -43,7 +42,15 @@ function startOfMonth(date: Date) {
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString();
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  }).format(new Date(value));
 }
 
 function getUniquePeptides(logs: InjectionHistoryRow[]) {
@@ -124,89 +131,94 @@ export default function InjectionHistoryTable({ logs }: Props) {
         </span>
       </div>
 
-      <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.9fr_0.9fr_auto]">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setVisibleCount(20);
-            }}
-            placeholder="Search peptide or dose"
-            className="col-span-full lg:col-span-1 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:bg-white"
-          />
-
-          <select
-            value={selectedPeptide}
-            onChange={(e) => {
-              setSelectedPeptide(e.target.value);
-              setVisibleCount(20);
-            }}
-            className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-accent)] focus:bg-white"
-          >
-            <option value="">All peptides</option>
-            {peptides.map((peptide) => (
-              <option key={peptide} value={peptide}>
-                {peptide}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={dateFilter}
-            onChange={(e) => {
-              setDateFilter(
-                e.target.value as "all" | "today" | "week" | "month" | "specific"
-              );
-              setVisibleCount(20);
-              if (e.target.value !== "specific") {
-                setSpecificDate("");
-              }
-            }}
-            className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-accent)] focus:bg-white"
-          >
-            <option value="all">All dates</option>
-            <option value="today">Today</option>
-            <option value="week">This week</option>
-            <option value="month">This month</option>
-            <option value="specific">Specific date</option>
-          </select>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSearch("");
-              setSelectedPeptide("");
-              setDateFilter("all");
-              setSpecificDate("");
-              setVisibleCount(20);
-            }}
-            className="w-full lg:w-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] hover:border-[var(--color-accent)] hover:bg-white"
-          >
-            Clear filters
-          </button>
-        </div>
-
-        {dateFilter === "specific" ? (
-          <div className="grid gap-3 sm:grid-cols-[220px_auto]">
+      <div className="space-y-2">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <input
-              type="date"
-              value={specificDate}
+              type="text"
+              value={search}
               onChange={(e) => {
-                setSpecificDate(e.target.value);
+                setSearch(e.target.value);
                 setVisibleCount(20);
               }}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)] focus:bg-white"
+              placeholder="Search peptide or dose"
+              title="Search peptide or dose"
+              className="min-w-0 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
             />
 
-            <div className="flex items-center">
-              <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
-                Date: {specificDate || "Select a date"}
-              </span>
-            </div>
+            <select
+              value={selectedPeptide}
+              onChange={(e) => {
+                setSelectedPeptide(e.target.value);
+                setVisibleCount(20);
+              }}
+              className="min-w-0 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 pr-8 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)]"
+            >
+              <option value="">All peptides</option>
+              {peptides.map((peptide) => (
+                <option key={peptide} value={peptide}>
+                  {peptide}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={dateFilter}
+              onChange={(e) => {
+                setDateFilter(
+                  e.target.value as "all" | "today" | "week" | "month" | "specific"
+                );
+                setVisibleCount(20);
+                if (e.target.value !== "specific") {
+                  setSpecificDate("");
+                }
+              }}
+              className="min-w-0 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 pr-8 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)]"
+            >
+              <option value="all">All dates</option>
+              <option value="today">Today</option>
+              <option value="week">This week</option>
+              <option value="month">This month</option>
+              <option value="specific">Specific date</option>
+            </select>
           </div>
-        ) : null}
+
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setSelectedPeptide("");
+                setDateFilter("all");
+                setSpecificDate("");
+                setVisibleCount(20);
+              }}
+              className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
+            >
+              Clear filters
+            </button>
+          </div>
+
+          {dateFilter === "specific" ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-[220px_auto]">
+              <input
+                type="date"
+                value={specificDate}
+                onChange={(e) => {
+                  setSpecificDate(e.target.value);
+                  setVisibleCount(20);
+                }}
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)] focus:bg-white"
+              />
+
+              <div className="flex items-center">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]">
+                  Date: {specificDate || "Select a date"}
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {hasActiveFilters ? (
@@ -229,10 +241,10 @@ export default function InjectionHistoryTable({ logs }: Props) {
               {dateFilter === "today"
                 ? "Today"
                 : dateFilter === "week"
-                  ? "This week"
-                  : dateFilter === "month"
-                    ? "This month"
-                    : specificDate || "Select a date"}
+                ? "This week"
+                : dateFilter === "month"
+                ? "This month"
+                : specificDate || "Select a date"}
             </span>
           ) : null}
         </div>

@@ -17,6 +17,9 @@ type Props = {
   upgradeHref?: string;
 };
 
+const fieldClassName =
+  "w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-[var(--color-muted)]";
+
 export default function NewInjectionPlanForm({
   peptides,
   disabled = false,
@@ -101,7 +104,7 @@ export default function NewInjectionPlanForm({
       frequencyType === "every_x_days" &&
       (!frequencyValue || Number(frequencyValue) < 1)
     ) {
-      setError("Please enter how many days for the frequency.");
+      setError("Please enter how many days between injections.");
       return;
     }
 
@@ -189,7 +192,7 @@ export default function NewInjectionPlanForm({
           <select
             value={peptideId}
             onChange={(e) => setPeptideId(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            className={fieldClassName}
           >
             <option value="">Select a peptide</option>
             {peptides.map((peptide) => (
@@ -209,7 +212,7 @@ export default function NewInjectionPlanForm({
             value={planName}
             onChange={(e) => setPlanName(e.target.value)}
             placeholder="Morning Recovery Plan"
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            className={fieldClassName}
           />
         </div>
 
@@ -225,7 +228,7 @@ export default function NewInjectionPlanForm({
               value={doseAmount}
               onChange={(e) => setDoseAmount(e.target.value)}
               placeholder="250"
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+              className={fieldClassName}
             />
           </div>
 
@@ -236,7 +239,7 @@ export default function NewInjectionPlanForm({
             <select
               value={doseUnit}
               onChange={(e) => setDoseUnit(e.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+              className={fieldClassName}
             >
               <option value="mcg">mcg</option>
               <option value="mg">mg</option>
@@ -254,7 +257,7 @@ export default function NewInjectionPlanForm({
             <select
               value={frequencyType}
               onChange={(e) => setFrequencyType(e.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+              className={fieldClassName}
             >
               <option value="daily">Daily</option>
               <option value="every_x_days">Every X days</option>
@@ -273,8 +276,11 @@ export default function NewInjectionPlanForm({
                 value={frequencyValue}
                 onChange={(e) => setFrequencyValue(e.target.value)}
                 placeholder="3"
-                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+                className={fieldClassName}
               />
+              <p className="mt-1.5 text-xs text-[var(--color-muted)]">
+                Enter the number of days between injections.
+              </p>
             </div>
           ) : null}
         </div>
@@ -288,7 +294,7 @@ export default function NewInjectionPlanForm({
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+              className={fieldClassName}
             />
           </div>
 
@@ -300,8 +306,11 @@ export default function NewInjectionPlanForm({
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+              className={fieldClassName}
             />
+            <p className="mt-1.5 text-xs text-[var(--color-muted)]">
+              Optional. Leave blank for an ongoing plan.
+            </p>
           </div>
         </div>
 
@@ -313,35 +322,51 @@ export default function NewInjectionPlanForm({
             type="time"
             value={defaultTime}
             onChange={(e) => setDefaultTime(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            className={fieldClassName}
           />
           <p className="mt-1.5 text-xs text-[var(--color-muted)]">
             Used to calculate reminder timing.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[var(--color-border)] p-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
           <h3 className="text-sm font-semibold text-[var(--color-text)]">
             Plan settings
           </h3>
 
           <div className="mt-3 grid gap-3">
-            <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
+            <label className="flex items-start justify-between gap-4 rounded-xl border border-[var(--color-border)] bg-white p-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Plan is active
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  Active plans are included in reminders and adherence tracking.
+                </p>
+              </div>
               <input
                 type="checkbox"
                 checked={active}
                 onChange={(e) => setActive(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               />
-              Plan is active
             </label>
 
-            <label className="flex items-center gap-3 text-sm text-[var(--color-text)]">
+            <label className="flex items-start justify-between gap-4 rounded-xl border border-[var(--color-border)] bg-white p-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Enable reminders
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  Send reminder emails before the scheduled injection time.
+                </p>
+              </div>
               <input
                 type="checkbox"
                 checked={remindersEnabled}
                 onChange={(e) => setRemindersEnabled(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               />
-              Enable reminders
             </label>
 
             {remindersEnabled ? (
@@ -352,7 +377,7 @@ export default function NewInjectionPlanForm({
                 <select
                   value={reminderOffsetHours}
                   onChange={(e) => setReminderOffsetHours(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+                  className={fieldClassName}
                 >
                   <option value="1">1 hour before</option>
                   <option value="6">6 hours before</option>
@@ -374,36 +399,34 @@ export default function NewInjectionPlanForm({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Rotate left/right abdomen and log any reactions"
-            className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm disabled:bg-gray-50"
+            className={fieldClassName}
           />
         </div>
       </fieldset>
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={isSubmitDisabled}
-        className={`min-h-11 rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${
-          isSubmitDisabled
-            ? "cursor-not-allowed bg-slate-400"
-            : "bg-[var(--color-accent)] hover:opacity-90"
-        }`}
-      >
-        {isFormLocked
-          ? "Upgrade to create a plan"
-          : isPending
-            ? "Saving..."
-            : "Create plan"}
-      </button>
+      {!isFormLocked ? (
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={isSubmitDisabled}
+          className={`min-h-11 rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${
+            isSubmitDisabled
+              ? "cursor-not-allowed bg-slate-400"
+              : "bg-[var(--color-accent)] hover:opacity-90"
+          }`}
+        >
+          {isPending ? "Saving..." : "Create plan"}
+        </button>
+      ) : null}
 
       {message ? (
-        <div className="rounded-2xl border border-green-300 bg-green-50 p-3 text-sm text-green-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
           {message}
         </div>
       ) : null}
 
       {error ? (
-        <div className="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}

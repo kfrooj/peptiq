@@ -61,19 +61,25 @@ export default async function PeptideDetailPage({
 
   const researchLinks = parseReferenceLinks(peptide.references);
 
+  const categoryLabel = peptide.category?.trim() || "Peptide";
+  const hasCalculatorDefaults =
+    peptide.default_vial_mg ||
+    peptide.default_mixing_volume_ml ||
+    peptide.default_sample_size_mcg;
+
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-sm font-medium text-amber-900">
-          Reference information only, not medical advice.
+    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+        <p className="text-sm font-medium text-[var(--color-text)]">
+          Reference information only. Not medical advice or intended for human use.
         </p>
       </div>
 
-      <section className="mb-6 overflow-hidden rounded-3xl border bg-white shadow-sm">
+      <section className="mb-6 overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white shadow-sm">
         <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-[minmax(0,1fr)_280px] md:items-start">
           <div className="min-w-0">
             <p className="mb-3 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-              {peptide.category}
+              {categoryLabel}
             </p>
 
             <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl">
@@ -83,16 +89,42 @@ export default async function PeptideDetailPage({
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-muted)]">
               {description}
             </p>
+
+            {hasCalculatorDefaults ? (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {peptide.default_vial_mg ? (
+                  <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
+                    Default vial: {peptide.default_vial_mg} mg
+                  </span>
+                ) : null}
+                {peptide.default_mixing_volume_ml ? (
+                  <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
+                    Default mix: {peptide.default_mixing_volume_ml} mL
+                  </span>
+                ) : null}
+                {peptide.default_sample_size_mcg ? (
+                  <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
+                    Default sample: {peptide.default_sample_size_mcg} mcg
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
-          <aside className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
+          <aside className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                Actions
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-white p-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                  Save
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Save to favorites
                 </p>
-                <p className="mt-1 text-sm text-[var(--color-text)]">
-                  Add this peptide to favorites.
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  Add this peptide for quick access later.
                 </p>
               </div>
 
@@ -101,12 +133,12 @@ export default async function PeptideDetailPage({
               </div>
             </div>
 
-            <div className="mt-5 border-t border-[var(--color-border)] pt-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                Tools
+            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-white p-3">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Open in calculator
               </p>
-              <p className="mt-1 text-sm text-[var(--color-text)]">
-                Open this peptide directly in the calculator.
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                Pre-fill the calculator using this peptide’s defaults.
               </p>
 
               <Link
@@ -117,7 +149,7 @@ export default async function PeptideDetailPage({
                 }&sampleMcg=${peptide.default_sample_size_mcg ?? ""}`}
                 className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
               >
-                Open in calculator
+                Open calculator
               </Link>
             </div>
           </aside>
@@ -125,12 +157,12 @@ export default async function PeptideDetailPage({
       </section>
 
       <div className="grid gap-5">
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
             Reported Effects
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-            Community sourced data, not verified claims.
+            Community-referenced observations, not verified claims.
           </p>
 
           {reportedEffects.length ? (
@@ -146,12 +178,12 @@ export default async function PeptideDetailPage({
           )}
         </section>
 
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
             Reference Dosage Ranges
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-            Community-referenced data, not recommendations.
+            Reference values gathered from community sources.
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -161,7 +193,7 @@ export default async function PeptideDetailPage({
           </div>
         </section>
 
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
             Frequency Reference
           </h2>
@@ -173,12 +205,12 @@ export default async function PeptideDetailPage({
           </div>
         </section>
 
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
             Published Research
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-            Peer-reviewed publications on PubMed.
+            Linked publications and source material.
           </p>
 
           {researchLinks.length ? (
@@ -201,18 +233,6 @@ export default async function PeptideDetailPage({
             </p>
           )}
         </section>
-
-        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold tracking-tight text-amber-950">
-            Reference Information
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-amber-900">
-            Data compiled from community sources for reference only. This
-            information does not constitute medical advice, diagnosis, or
-            treatment guidance and should not be used as a basis for any
-            health-related decisions.
-          </p>
-        </section>
       </div>
     </main>
   );
@@ -226,7 +246,7 @@ function DosageTile({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
         {label}
       </p>

@@ -5,6 +5,28 @@ import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
+function getFriendlyAuthError(message: string) {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("invalid login credentials")) {
+    return "Your email or password is incorrect.";
+  }
+
+  if (lower.includes("email not confirmed")) {
+    return "Please confirm your email address before signing in.";
+  }
+
+  if (lower.includes("already")) {
+    return "An account with this email already exists.";
+  }
+
+  if (lower.includes("password")) {
+    return "Please check your password and try again.";
+  }
+
+  return "Something went wrong. Please try again.";
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -33,7 +55,7 @@ export default function LoginPage() {
         });
 
         if (error) {
-          setError(error.message);
+          setError(getFriendlyAuthError(error.message));
           setIsLoading(false);
           return;
         }
@@ -55,7 +77,7 @@ export default function LoginPage() {
           .single();
 
         if (profileError) {
-          setError("Could not load user profile.");
+          setError("Could not load your account.");
           setIsLoading(false);
           return;
         }
@@ -63,23 +85,24 @@ export default function LoginPage() {
         if (profile?.role === "admin") {
           router.push("/admin/peptides");
         } else {
-          router.push("/home");
+          router.push("/dashboard");
         }
 
         router.refresh();
       } else {
+        if (password.length < 8) {
+          setError("Use at least 8 characters for your password.");
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
         });
 
         if (error) {
-          if (error.message.toLowerCase().includes("already")) {
-            setError("An account with this email already exists.");
-          } else {
-            setError(error.message);
-          }
-
+          setError(getFriendlyAuthError(error.message));
           setIsLoading(false);
           return;
         }
@@ -106,7 +129,7 @@ export default function LoginPage() {
           return;
         }
 
-        setMessage("Account created successfully. You can now log in.");
+        setMessage("Account created. Sign in to continue.");
         setMode("login");
         setEmail(normalizedEmail);
         setPassword("");
@@ -118,17 +141,26 @@ export default function LoginPage() {
     setIsLoading(false);
   }
 
+  const isLogin = mode === "login";
+
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-md items-center p-6">
+    <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-md items-center px-4 py-8 sm:px-6">
       <form
         onSubmit={handleSubmit}
-        className="w-full rounded-xl border bg-white p-6 shadow-sm"
+        className="w-full rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm sm:rounded-3xl sm:p-8"
       >
-        <h1 className="mb-6 text-2xl font-bold text-[var(--color-text)]">
-          {mode === "login" ? "Login" : "Create account"}
-        </h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">
+            {isLogin ? "Welcome back" : "Create your account"}
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            {isLogin
+              ? "Sign in to access your plans, reminders, and tracking."
+              : "Create an account to start tracking plans, reminders, and adherence in PEPT|IQ."}
+          </p>
+        </div>
 
-        <div className="mb-6 flex rounded-xl bg-[var(--color-surface-muted)] p-1">
+        <div className="mb-6 flex rounded-2xl bg-[var(--color-surface-muted)] p-1">
           <button
             type="button"
             onClick={() => {
@@ -136,8 +168,8 @@ export default function LoginPage() {
               setError(null);
               setMessage(null);
             }}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-              mode === "login"
+            className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              isLogin
                 ? "bg-[var(--color-accent)] text-white"
                 : "text-[var(--color-text)]"
             }`}
@@ -152,8 +184,8 @@ export default function LoginPage() {
               setError(null);
               setMessage(null);
             }}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-              mode === "signup"
+            className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              !isLogin
                 ? "bg-[var(--color-accent)] text-white"
                 : "text-[var(--color-text)]"
             }`}
@@ -162,61 +194,84 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <label className="mb-3 block">
-          <span className="mb-1 block text-sm font-medium">Email</span>
+        <label className="mb-4 block">
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Email
+          </span>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
-            className="w-full rounded-md border px-3 py-2"
+            className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             required
           />
         </label>
 
         <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-medium">Password</span>
+          <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
+            Password
+          </span>
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
-            className="w-full rounded-md border px-3 py-2"
+            className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             required
           />
         </label>
 
-        {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+        {!isLogin ? (
+          <p className="mb-4 text-xs leading-5 text-[var(--color-muted)]">
+            Use at least 8 characters for your password.
+          </p>
+        ) : null}
+
+        {error ? (
+          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
 
         {message ? (
-          <p className="mb-3 text-sm text-green-600">{message}</p>
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {message}
+          </div>
         ) : null}
 
         <button
           disabled={isLoading}
-          className={`w-full rounded-xl px-4 py-2 text-white shadow-sm transition ${
+          className={`w-full rounded-xl px-4 py-3 text-sm font-medium text-white shadow-sm transition ${
             isLoading
               ? "cursor-not-allowed bg-gray-400"
               : "bg-[var(--color-accent)] hover:opacity-90"
           }`}
         >
           {isLoading
-            ? mode === "login"
+            ? isLogin
               ? "Logging in..."
               : "Creating account..."
-            : mode === "login"
-              ? "Sign in"
-              : "Create account"}
+            : isLogin
+            ? "Sign in"
+            : "Create account"}
         </button>
 
-        {mode === "login" ? (
-          <div className="mt-4 text-center">
+        <div className="mt-4 flex flex-col items-center gap-3">
+          {isLogin ? (
             <Link
               href="/forgot-password"
-              className="text-sm text-blue-600 transition hover:text-blue-500"
+              className="text-sm text-[var(--color-accent)] transition hover:opacity-80"
             >
               Forgot password?
             </Link>
-          </div>
-        ) : null}
+          ) : null}
+
+          <Link
+            href="/dashboard"
+            className="text-sm text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
+          >
+            Back to dashboard
+          </Link>
+        </div>
       </form>
     </main>
   );

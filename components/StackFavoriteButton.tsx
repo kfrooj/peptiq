@@ -4,7 +4,7 @@ import FavoriteButton from "@/components/FavoriteButton";
 import {
   favoriteStack,
   unfavoriteStack,
-} from "@/app/(protected)/dashboard/actions";
+} from "@/app/dashboard/actions";
 
 type Props = {
   stackId: string;

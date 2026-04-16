@@ -29,15 +29,15 @@ export default function SiteHeader({ user, isAdmin }: Props) {
   const pathname = usePathname();
 
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toolsMenuRef = useRef<HTMLDivElement | null>(null);
-  const moreMenuRef = useRef<HTMLDivElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setToolsMenuOpen(false);
-    setMoreMenuOpen(false);
+    setProfileMenuOpen(false);
     setMobileMenuOpen(false);
   }, [pathname]);
 
@@ -51,17 +51,17 @@ export default function SiteHeader({ user, isAdmin }: Props) {
       }
 
       if (
-        moreMenuRef.current &&
-        !moreMenuRef.current.contains(event.target as Node)
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
       ) {
-        setMoreMenuOpen(false);
+        setProfileMenuOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setToolsMenuOpen(false);
-        setMoreMenuOpen(false);
+        setProfileMenuOpen(false);
         setMobileMenuOpen(false);
       }
     }
@@ -76,33 +76,40 @@ export default function SiteHeader({ user, isAdmin }: Props) {
   }, []);
 
   const publicPrimaryNav: NavItem[] = [
-    { href: "/home", label: "Home" },
+    { href: "/dashboard", label: "Dashboard" },
     { href: "/peptides", label: "Peptides" },
-    { href: "/calculator", label: "Calculator" },
+    { href: "/reviews", label: "Reviews" },
+    
   ];
 
   const loggedInPrimaryNav: NavItem[] = [
-    { href: "/home", label: "Home" },
     { href: "/dashboard", label: "Dashboard" },
     { href: "/peptides", label: "Peptides" },
-    { href: "/profile", label: "Profile" },
+    { href: "/plans", label: "Plans" },
+  ];
+
+  const loggedInSecondaryNav: NavItem[] = [
+    { href: "/reviews", label: "Reviews" },
+    { href: "/support", label: "Support" },
   ];
 
   const toolsNav: NavItem[] = [
     { href: "/log-injection", label: "Injection" },
-    { href: "/plans", label: "Plans" },
     { href: "/wellness", label: "Wellness" },
     { href: "/calculator", label: "Calculator" },
     { href: "/stacks", label: "Stacks" },
   ];
 
-  const moreNav: NavItem[] = [
+  const profileNav: NavItem[] = [
+    { href: "/profile", label: "Profile" },
     ...(isAdmin ? [{ href: "/admin/peptides", label: "Admin" }] : []),
   ];
 
   const primaryNav = user ? loggedInPrimaryNav : publicPrimaryNav;
   const toolsIsActive = toolsNav.some((item) => isActivePath(pathname, item.href));
-  const moreIsActive = moreNav.some((item) => isActivePath(pathname, item.href));
+  const profileIsActive = profileNav.some((item) =>
+    isActivePath(pathname, item.href)
+  );
 
   const pillBase =
     "rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200";
@@ -113,8 +120,12 @@ export default function SiteHeader({ user, isAdmin }: Props) {
   return (
     <header className="border-b border-slate-200 bg-gradient-to-r from-[#F8FBFF] to-[#EEF5FF] text-[#0F172A]">
       <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
-        <div className="flex items-center justify-between gap-2">
-          <Link href="/home" className="shrink-0" aria-label="Go to home">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/dashboard"
+            className="shrink-0"
+            aria-label="Go to dashboard"
+          >
             <div className="relative h-8 w-[110px] sm:h-9 sm:w-[135px] lg:h-10 lg:w-[150px]">
               <Image
                 src="/peptiq-logo-dark.png"
@@ -143,118 +154,146 @@ export default function SiteHeader({ user, isAdmin }: Props) {
             })}
 
             {user ? (
-              <div className="relative" ref={toolsMenuRef}>
-                <button
-                  type="button"
-                  aria-expanded={toolsMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => {
-                    setToolsMenuOpen((open) => !open);
-                    setMoreMenuOpen(false);
-                  }}
-                  className={`${pillBase} inline-flex items-center gap-1 ${
-                    toolsIsActive || toolsMenuOpen ? pillActive : pillInactive
-                  }`}
-                >
-                  Tools
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      toolsMenuOpen ? "rotate-180" : ""
+              <>
+                <div className="relative" ref={toolsMenuRef}>
+                  <button
+                    type="button"
+                    aria-expanded={toolsMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => {
+                      setToolsMenuOpen((open) => !open);
+                      setProfileMenuOpen(false);
+                    }}
+                    className={`${pillBase} inline-flex items-center gap-1 ${
+                      toolsIsActive || toolsMenuOpen ? pillActive : pillInactive
                     }`}
-                  />
-                </button>
-
-                {toolsMenuOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[180px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
                   >
-                    <div className="p-2">
-                      {toolsNav.map((item) => {
-                        const active = isActivePath(pathname, item.href);
+                    Tools
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        toolsMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
 
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            role="menuitem"
-                            className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
-                              active
-                                ? "bg-[#2F5E8E] text-white"
-                                : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
-                            }`}
-                          >
-                            {item.label}
-                          </Link>
-                        );
-                      })}
+                  {toolsMenuOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[190px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    >
+                      <div className="border-b border-slate-100 px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Tools
+                        </p>
+                      </div>
+
+                      <div className="p-2">
+                        {toolsNav.map((item) => {
+                          const active = isActivePath(pathname, item.href);
+
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              role="menuitem"
+                              className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
+                                active
+                                  ? "bg-[#2F5E8E] text-white"
+                                  : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                              }`}
+                            >
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+                  ) : null}
+                </div>
 
-            {moreNav.length ? (
-              <div className="relative" ref={moreMenuRef}>
-                <button
-                  type="button"
-                  aria-expanded={moreMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => {
-                    setMoreMenuOpen((open) => !open);
-                    setToolsMenuOpen(false);
-                  }}
-                  className={`${pillBase} inline-flex items-center gap-1 ${
-                    moreIsActive || moreMenuOpen ? pillActive : pillInactive
-                  }`}
-                >
-                  More
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      moreMenuOpen ? "rotate-180" : ""
+                {loggedInSecondaryNav.map((item) => {
+                  const active = isActivePath(pathname, item.href);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`${pillBase} ${active ? pillActive : pillInactive}`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    type="button"
+                    aria-expanded={profileMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => {
+                      setProfileMenuOpen((open) => !open);
+                      setToolsMenuOpen(false);
+                    }}
+                    className={`${pillBase} inline-flex items-center gap-1 ${
+                      profileIsActive || profileMenuOpen
+                        ? pillActive
+                        : pillInactive
                     }`}
-                  />
-                </button>
-
-                {moreMenuOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[160px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
                   >
-                    <div className="p-2">
-                      {moreNav.map((item) => {
-                        const active = isActivePath(pathname, item.href);
+                    Profile
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        profileMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
 
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            role="menuitem"
-                            className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
-                              active
-                                ? "bg-[#2F5E8E] text-white"
-                                : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
-                            }`}
+                  {profileMenuOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-[calc(100%+0.5rem)] z-50 min-w-[190px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    >
+                      <div className="border-b border-slate-100 px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Account
+                        </p>
+                      </div>
+
+                      <div className="p-2">
+                        {profileNav.map((item) => {
+                          const active = isActivePath(pathname, item.href);
+
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              role="menuitem"
+                              className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
+                                active
+                                  ? "bg-[#2F5E8E] text-white"
+                                  : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                              }`}
+                            >
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+
+                        <div className="my-1 border-t border-slate-100" />
+
+                        <form action="/auth/signout" method="post">
+                          <button
+                            type="submit"
+                            className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#2F5E8E]"
                           >
-                            {item.label}
-                          </Link>
-                        );
-                      })}
+                            Logout
+                          </button>
+                        </form>
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {user ? (
-              <form action="/auth/signout" method="post" className="ml-1">
-                <button
-                  type="submit"
-                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-[#2F5E8E]"
-                >
-                  Logout
-                </button>
-              </form>
+                  ) : null}
+                </div>
+              </>
             ) : (
               <>
                 <Link
@@ -267,7 +306,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                 </Link>
 
                 <Link
-                  href="/login"
+                  href="/signup"
                   className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8]"
                 >
                   Sign up
@@ -277,28 +316,10 @@ export default function SiteHeader({ user, isAdmin }: Props) {
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
-            {!user ? (
-              <Link
-                href="/login"
-                className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8] whitespace-nowrap"
-              >
-                Sign up
-              </Link>
-            ) : (
-              <form action="/auth/signout" method="post">
-                <button
-                  type="submit"
-                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 whitespace-nowrap"
-                >
-                  Logout
-                </button>
-              </form>
-            )}
-
             <button
               type="button"
               onClick={() => setMobileMenuOpen((open) => !open)}
-              className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 whitespace-nowrap"
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 whitespace-nowrap"
               aria-expanded={mobileMenuOpen}
               aria-haspopup="menu"
             >
@@ -308,8 +329,12 @@ export default function SiteHeader({ user, isAdmin }: Props) {
         </div>
 
         {mobileMenuOpen ? (
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:hidden">
+          <div className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-md md:hidden">
             <div className="grid gap-2">
+              <div className="px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Main
+              </div>
+
               {primaryNav.map((item) => {
                 const active = isActivePath(pathname, item.href);
 
@@ -328,21 +353,13 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                 );
               })}
 
-              {!user ? (
-                <Link
-                  href="/login"
-                  className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
-                    isActivePath(pathname, "/login")
-                      ? "bg-[#2F5E8E] text-white"
-                      : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
-                  }`}
-                >
-                  Login
-                </Link>
-              ) : null}
+              {user ? (
+                <>
+                  <div className="px-2 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Tools
+                  </div>
 
-              {user
-                ? toolsNav.map((item) => {
+                  {toolsNav.map((item) => {
                     const active = isActivePath(pathname, item.href);
 
                     return (
@@ -358,26 +375,90 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                         {item.label}
                       </Link>
                     );
-                  })
-                : null}
+                  })}
 
-              {moreNav.map((item) => {
-                const active = isActivePath(pathname, item.href);
+                  <div className="px-2 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Explore
+                  </div>
 
-                return (
+                  {loggedInSecondaryNav.map((item) => {
+                    const active = isActivePath(pathname, item.href);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          active
+                            ? "bg-[#2F5E8E] text-white"
+                            : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+
+                  <div className="px-2 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Account
+                  </div>
+
+                  {profileNav.map((item) => {
+                    const active = isActivePath(pathname, item.href);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                          active
+                            ? "bg-[#2F5E8E] text-white"
+                            : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+
+                  <form action="/auth/signout" method="post">
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-[#2F5E8E]"
+                    >
+                      Logout
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <div className="px-2 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Account
+                  </div>
+
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    href="/login"
                     className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      active
+                      isActivePath(pathname, "/login")
                         ? "bg-[#2F5E8E] text-white"
                         : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
                     }`}
                   >
-                    {item.label}
+                    Login
                   </Link>
-                );
-              })}
+
+                  <Link
+                    href="/signup"
+                    className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      isActivePath(pathname, "/signup")
+                        ? "bg-[#2F5E8E] text-white"
+                        : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
+                    }`}
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         ) : null}

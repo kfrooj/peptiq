@@ -12,29 +12,30 @@ export default function CalculatorPageClient() {
   const initialSampleMcg = searchParams.get("sampleMcg") ?? "";
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <section className="mb-8 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-sm">
+    <div className="mx-auto max-w-5xl">
+      <section className="mb-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm sm:mb-8 sm:p-8">
         <div className="mb-4 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-muted)]">
           Research use only
         </div>
 
-        <h1 className="text-4xl font-bold tracking-tight text-[var(--color-text)]">
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl">
           Peptide Reconstitution Calculator
         </h1>
 
-        <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-muted)]">
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-muted)] sm:text-base">
           Calculate concentration, required volume, and syringe units for research
-          preparation. 
+          preparation.
         </p>
-        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-sm font-medium text-amber-900">
-          Reference information only, not medical advice.
-        </p>
-      </div>
+
+        <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+          <p className="text-sm font-medium text-[var(--color-text)]">
+            Reference information only. Not medical advice or intended for human use.
+          </p>
+        </div>
 
         {peptideName ? (
           <div className="mt-5 inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-            Selected peptide: {peptideName}
+            Pre-filled from peptide: {peptideName}
           </div>
         ) : null}
       </section>
@@ -45,16 +46,6 @@ export default function CalculatorPageClient() {
         initialMixingVolumeMl={initialMixingVolumeMl}
         initialSampleMcg={initialSampleMcg}
       />
-
-      <section className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-6">
-        <h2 className="text-lg font-semibold text-[var(--color-text)]">
-          Important note
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--color-text)]">
-          This calculator is provided for research and informational purposes only.
-          It is not medical advice and is not intended for human use.
-        </p>
-      </section>
-    </main>
+    </div>
   );
 }

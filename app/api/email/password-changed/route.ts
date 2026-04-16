@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { sendPeptiqEmail } from "@/lib/email/resend";
 import { getPasswordChangedEmail } from "@/lib/email/templates/password-changed";
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    const body = await request.json();
-    const emailAddress = String(body.email ?? "").trim();
+    const supabase = await createClient();
 
-    if (!emailAddress) {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user?.email) {
       return NextResponse.json(
-        { ok: false, error: "Missing email address" },
-        { status: 400 }
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
@@ -20,10 +25,11 @@ export async function POST(request: Request) {
     });
 
     await sendPeptiqEmail({
-      to: emailAddress,
+      to: user.email,
       subject: email.subject,
       html: email.html,
       text: email.text,
+      fromType: "security",
     });
 
     return NextResponse.json({ ok: true });

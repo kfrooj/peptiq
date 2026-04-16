@@ -134,97 +134,118 @@ export async function GET(request: Request) {
 
     let sent = 0;
     let skipped = 0;
+    let failed = 0;
 
     for (const plan of (plans ?? []) as PlanRow[]) {
-      if (!isPlanDueToday(plan, now)) {
-        skipped += 1;
-        continue;
-      }
+      try {
+        if (!isPlanDueToday(plan, now)) {
+          skipped += 1;
+          continue;
+        }
 
-      const scheduledFor = getScheduledDateTime(plan, now);
-      const offsetHours =
-        typeof plan.reminder_offset_hours === "number"
-          ? plan.reminder_offset_hours
-          : 0;
+        const scheduledFor = getScheduledDateTime(plan, now);
+        const offsetHours =
+          typeof plan.reminder_offset_hours === "number"
+            ? plan.reminder_offset_hours
+            : 0;
 
-      const reminderAt = new Date(
-        scheduledFor.getTime() - offsetHours * 60 * 60 * 1000
-      );
+        const reminderAt = new Date(
+          scheduledFor.getTime() - offsetHours * 60 * 60 * 1000
+        );
 
-      const diffMs = Math.abs(now.getTime() - reminderAt.getTime());
-      const withinWindow = diffMs <= 15 * 60 * 1000;
+        const diffMs = Math.abs(now.getTime() - reminderAt.getTime());
+        const withinWindow = diffMs <= 15 * 60 * 1000;
 
-      if (!withinWindow) {
-        skipped += 1;
-        continue;
-      }
+        if (!withinWindow) {
+          skipped += 1;
+          continue;
+        }
 
-      const { data: existingLog, error: logLookupError } = await supabase
-        .from("reminder_email_logs")
-        .select("id")
-        .eq("plan_id", plan.id)
-        .eq("scheduled_for", reminderAt.toISOString())
-        .eq("kind", "plan_reminder")
-        .maybeSingle();
+        const { data: existingLog, error: logLookupError } = await supabase
+          .from("reminder_email_logs")
+          .select("id")
+          .eq("plan_id", plan.id)
+          .eq("scheduled_for", reminderAt.toISOString())
+          .eq("kind", "plan_reminder")
+          .maybeSingle();
 
-      if (logLookupError) {
-        console.error("Reminder log lookup error:", logLookupError);
-      }
+        if (logLookupError) {
+          console.error("Reminder log lookup error:", logLookupError);
+        }
 
-      if (existingLog) {
-        skipped += 1;
-        continue;
-      }
+        if (existingLog) {
+          skipped += 1;
+          continue;
+        }
 
-      const [{ data: profile }, { data: authUserResult }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, name, notification_email_reminders, timezone")
-          .eq("id", plan.user_id)
-          .maybeSingle(),
-        supabase.auth.admin.getUserById(plan.user_id),
-      ]);
+        const [{ data: profile }, { data: authUserResult, error: authUserError }] =
+          await Promise.all([
+            supabase
+              .from("profiles")
+              .select("id, name, notification_email_reminders, timezone")
+              .eq("id", plan.user_id)
+              .maybeSingle(),
+            supabase.auth.admin.getUserById(plan.user_id),
+          ]);
 
-      const typedProfile = profile as ProfileRow | null;
-      const email = authUserResult.user?.email ?? null;
+        if (authUserError) {
+          console.error("Auth user lookup error:", {
+            userId: plan.user_id,
+            error: authUserError,
+          });
+          failed += 1;
+          continue;
+        }
 
-      if (!typedProfile?.notification_email_reminders || !email) {
-        skipped += 1;
-        continue;
-      }
+        const typedProfile = profile as ProfileRow | null;
+        const email = authUserResult.user?.email ?? null;
 
-      const emailContent = getPlanReminderEmail({
-        userName: typedProfile.name,
-        planName: plan.plan_name ?? "Injection plan",
-        doseAmount: plan.dose_amount,
-        doseUnit: plan.dose_unit,
-        scheduledLabel: reminderAt.toLocaleString("en-GB", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }),
-      });
+        if (!typedProfile?.notification_email_reminders || !email) {
+          skipped += 1;
+          continue;
+        }
 
-      await sendPeptiqEmail({
-        to: email,
-        subject: emailContent.subject,
-        html: emailContent.html,
-        text: emailContent.text,
-      });
-
-      const { error: insertLogError } = await supabase
-        .from("reminder_email_logs")
-        .insert({
-          user_id: plan.user_id,
-          plan_id: plan.id,
-          scheduled_for: reminderAt.toISOString(),
-          kind: "plan_reminder",
+        const emailContent = getPlanReminderEmail({
+          userName: typedProfile.name,
+          planName: plan.plan_name ?? "Injection plan",
+          doseAmount: plan.dose_amount,
+          doseUnit: plan.dose_unit,
+          scheduledLabel: scheduledFor.toLocaleString("en-GB", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
         });
 
-      if (insertLogError) {
-        console.error("Reminder log insert error:", insertLogError);
-      }
+        await sendPeptiqEmail({
+          to: email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+          text: emailContent.text,
+          fromType: "default",
+        });
 
-      sent += 1;
+        const { error: insertLogError } = await supabase
+          .from("reminder_email_logs")
+          .insert({
+            user_id: plan.user_id,
+            plan_id: plan.id,
+            scheduled_for: reminderAt.toISOString(),
+            kind: "plan_reminder",
+          });
+
+        if (insertLogError) {
+          console.error("Reminder log insert error:", insertLogError);
+        }
+
+        sent += 1;
+      } catch (error) {
+        failed += 1;
+        console.error("Plan reminder send error:", {
+          planId: plan.id,
+          userId: plan.user_id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     return NextResponse.json({
@@ -232,6 +253,7 @@ export async function GET(request: Request) {
       checked: plans?.length ?? 0,
       sent,
       skipped,
+      failed,
     });
   } catch (error) {
     console.error("Plan reminders cron error:", error);

@@ -1,15 +1,59 @@
 import Link from "next/link";
 
-export default function ForgotPasswordPage() {
+type ForgotPasswordPageProps = {
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+  }>;
+};
+
+function getFriendlyErrorMessage(error?: string) {
+  if (!error) return null;
+
+  if (error === "missing-email") {
+    return "Please enter your email address.";
+  }
+
+  return "We could not send a reset link right now. Please try again.";
+}
+
+export default async function ForgotPasswordPage({
+  searchParams,
+}: ForgotPasswordPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const success = params?.success;
+  const error = params?.error;
+
+  const successMessage =
+    success === "check-email"
+      ? "If an account exists for this email, we’ve sent a password reset link."
+      : null;
+
+  const errorMessage = getFriendlyErrorMessage(error);
+
   return (
-    <main className="mx-auto max-w-md px-4 py-10 sm:px-6 sm:py-12">
+    <main className="mx-auto max-w-md px-4 py-8 sm:px-6 sm:py-12">
       <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-sm sm:rounded-3xl sm:p-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">
-          Forgot Password
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Enter your email address and we’ll send you a password reset link.
-        </p>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">
+            Forgot password
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Enter your email address and we’ll send you a password reset link.
+          </p>
+        </div>
+
+        {successMessage ? (
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {successMessage}
+          </div>
+        ) : null}
+
+        {errorMessage ? (
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {errorMessage}
+          </div>
+        ) : null}
 
         <form action="/forgot-password/send" method="post" className="mt-6">
           <label className="block">
@@ -20,25 +64,31 @@ export default function ForgotPasswordPage() {
               type="email"
               name="email"
               required
-              className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-blue-500"
               placeholder="you@example.com"
+              className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </label>
 
+          <p className="mt-3 text-xs leading-5 text-[var(--color-muted)]">
+            If an account exists for this email, we’ll send a reset link.
+          </p>
+
           <button
             type="submit"
-            className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
+            className="mt-4 w-full rounded-xl bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90"
           >
-            Send Reset Link
+            Send reset link
           </button>
         </form>
 
-        <Link
-          href="/login"
-          className="mt-4 inline-block text-sm text-blue-600 hover:text-blue-500"
-        >
-          Back to login
-        </Link>
+        <div className="mt-4">
+          <Link
+            href="/login"
+            className="text-sm text-[var(--color-accent)] transition hover:opacity-80"
+          >
+            Back to login
+          </Link>
+        </div>
       </div>
     </main>
   );

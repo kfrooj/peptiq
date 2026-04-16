@@ -15,15 +15,17 @@ export default async function PeptidesPage() {
   }
 
   const peptides =
-    data?.map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      category: p.category ?? "Uncategorized",
-    })) ?? [];
+    data
+      ?.filter((p) => p.slug && p.name)
+      .map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        category: p.category?.trim() || "Uncategorized",
+      })) ?? [];
 
   return (
-    <main className="min-h-screen bg-[var(--color-background)]">
+    <main className="bg-[var(--color-background)]">
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
         <PeptideSearchList peptides={peptides} />
       </section>

@@ -1,3 +1,5 @@
+import { renderBaseEmailLayout } from "./_components/baseEmailLayout";
+
 type PlanReminderEmailParams = {
   userName?: string | null;
   planName: string;
@@ -18,33 +20,42 @@ export function getPlanReminderEmail({
   const greeting = userName?.trim() ? `Hi ${userName},` : "Hi,";
 
   const doseText =
-    doseAmount && doseUnit ? `${doseAmount}${doseUnit}` : "your scheduled dose";
+    doseAmount && doseUnit
+      ? `${doseAmount}${doseUnit}`
+      : "your scheduled dose";
 
   const subject = `${appName} reminder: ${planName}`;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-      <div style="max-width: 560px; margin: 0 auto; padding: 24px;">
-        <h1 style="font-size: 22px; margin-bottom: 16px;">Injection reminder</h1>
-        <p>${greeting}</p>
-        <p>This is a reminder for your plan <strong>${planName}</strong>.</p>
-        <p>
-          Scheduled time: <strong>${scheduledLabel}</strong><br />
-          Dose: <strong>${doseText}</strong>
-        </p>
-        <p>Open PEPTIQ to review your plan and log your injection.</p>
-      </div>
+  const bodyHtml = `
+    <p>${greeting}</p>
+
+    <p>
+      This is a reminder for your plan <strong>${planName}</strong>.
+    </p>
+
+    <div style="margin:16px 0;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+      <div><strong>Scheduled:</strong> ${scheduledLabel}</div>
+      <div><strong>Dose:</strong> ${doseText}</div>
     </div>
+
+    <p>
+      Open ${appName} to review your plan and log your injection.
+    </p>
   `;
+
+  const html = renderBaseEmailLayout({
+    title: "Injection reminder",
+    bodyHtml,
+  });
 
   const text = [
     greeting,
     "",
-    `This is a reminder for your plan "${planName}".`,
-    `Scheduled time: ${scheduledLabel}`,
+    `Reminder for your plan "${planName}".`,
+    `Scheduled: ${scheduledLabel}`,
     `Dose: ${doseText}`,
     "",
-    "Open PEPTIQ to review your plan and log your injection.",
+    `Open ${appName} to review your plan.`,
   ].join("\n");
 
   return { subject, html, text };

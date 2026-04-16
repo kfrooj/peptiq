@@ -31,7 +31,7 @@ export default async function AdminLayout({
   }
 
   if (profile?.role !== "admin") {
-    redirect("/home");
+    redirect("/dashboard");
   }
 
   return <>{children}</>;
