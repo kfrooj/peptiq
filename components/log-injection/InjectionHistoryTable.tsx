@@ -322,21 +322,25 @@ export default function InjectionHistoryTable({
         </div>
       ) : null}
 
-                <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
-       <div
-  className="grid gap-0 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]"
-  style={{ gridTemplateColumns: "1.15fr 1fr auto" }}
->
-  <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-    Peptide + Plan
-  </div>
-  <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-    Scheduled Date/Time
-  </div>
-  <div className="px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-    Action
-  </div>
-</div>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+        <div
+          className="grid gap-0 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]"
+          style={{ gridTemplateColumns: "1.2fr 1fr 0.8fr auto" }}
+        >
+          <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+            Peptide + Plan
+          </div>
+          <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+            Injection Date/Time
+          </div>
+          <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+            Dosage
+          </div>
+          <div className="px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+            Actions
+          </div>
+        </div>
+
         {!visibleItems.length ? (
           <div className="p-6 text-sm text-[var(--color-muted)]">
             No entries match your filters.
@@ -355,14 +359,14 @@ export default function InjectionHistoryTable({
                 <div
                   key={item.id}
                   className="grid gap-0"
-                  style={{ gridTemplateColumns: "1.15fr 1fr auto" }}
+                  style={{ gridTemplateColumns: "1.2fr 1fr 0.8fr auto" }}
                 >
                   <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
                     <p className="text-sm font-medium text-[var(--color-text)]">
                       {item.peptide_name}
                     </p>
                     {item.plan_name ? (
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
+                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
                         {item.plan_name}
                       </p>
                     ) : null}
@@ -371,6 +375,14 @@ export default function InjectionHistoryTable({
                   <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
                     <p className="text-sm text-[var(--color-text)]">
                       {formatDateTime(item.scheduled_at)}
+                    </p>
+                  </div>
+
+                  <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
+                    <p className="text-sm text-[var(--color-text)]">
+                      {item.dose_amount && item.dose_unit
+                        ? `${item.dose_amount} ${item.dose_unit}`
+                        : "—"}
                     </p>
                   </div>
 
