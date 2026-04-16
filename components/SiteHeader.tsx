@@ -78,8 +78,6 @@ export default function SiteHeader({ user, isAdmin }: Props) {
   const publicPrimaryNav: NavItem[] = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/peptides", label: "Peptides" },
-    { href: "/reviews", label: "Reviews" },
-    
   ];
 
   const loggedInPrimaryNav: NavItem[] = [
@@ -88,10 +86,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
     { href: "/plans", label: "Plans" },
   ];
 
-  const loggedInSecondaryNav: NavItem[] = [
-    { href: "/reviews", label: "Reviews" },
-    { href: "/support", label: "Support" },
-  ];
+  const loggedInSecondaryNav: NavItem[] = [];
 
   const toolsNav: NavItem[] = [
     { href: "/log-injection", label: "Injection" },
@@ -210,20 +205,6 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                     </div>
                   ) : null}
                 </div>
-
-                {loggedInSecondaryNav.map((item) => {
-                  const active = isActivePath(pathname, item.href);
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`${pillBase} ${active ? pillActive : pillInactive}`}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
 
                 <div className="relative" ref={profileMenuRef}>
                   <button
@@ -360,28 +341,6 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                   </div>
 
                   {toolsNav.map((item) => {
-                    const active = isActivePath(pathname, item.href);
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
-                          active
-                            ? "bg-[#2F5E8E] text-white"
-                            : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-
-                  <div className="px-2 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Explore
-                  </div>
-
-                  {loggedInSecondaryNav.map((item) => {
                     const active = isActivePath(pathname, item.href);
 
                     return (

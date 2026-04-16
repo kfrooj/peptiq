@@ -36,7 +36,9 @@ function getSubscriptionPeriodEnd(subscription: Stripe.Subscription) {
     : null;
 }
 
-function getStripeCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustomer | null) {
+function getStripeCustomerId(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null
+) {
   if (!customer) return null;
   return typeof customer === "string" ? customer : customer.id ?? null;
 }
@@ -58,15 +60,22 @@ async function findSupabaseUserIdFromCustomerId(customerId: string) {
   return data?.id ?? null;
 }
 
+{/*
 async function resolveSupabaseUserId({
   metadataUserId,
   customerId,
+  fallbackUserId,
 }: {
   metadataUserId?: string | null;
   customerId?: string | null;
+  fallbackUserId?: string | null;
 }) {
   if (metadataUserId) {
     return metadataUserId;
+  }
+
+  if (fallbackUserId) {
+    return fallbackUserId;
   }
 
   if (customerId) {
@@ -75,7 +84,42 @@ async function resolveSupabaseUserId({
 
   return null;
 }
+*/}
 
+async function resolveSupabaseUserId({
+  metadataUserId,
+  customerId,
+  fallbackUserId,
+}: {
+  metadataUserId?: string | null;
+  customerId?: string | null;
+  fallbackUserId?: string | null;
+}) {
+  console.log("[STRIPE WEBHOOK] resolveSupabaseUserId input:", {
+    metadataUserId,
+    fallbackUserId,
+    customerId,
+  });
+
+  if (metadataUserId) {
+    console.log("[STRIPE WEBHOOK] Resolved via subscription metadata:", metadataUserId);
+    return metadataUserId;
+  }
+
+  if (fallbackUserId) {
+    console.log("[STRIPE WEBHOOK] Resolved via checkout session metadata:", fallbackUserId);
+    return fallbackUserId;
+  }
+
+  if (customerId) {
+    const resolved = await findSupabaseUserIdFromCustomerId(customerId);
+    console.log("[STRIPE WEBHOOK] Resolved via stripe_customer_id lookup:", resolved);
+    return resolved;
+  }
+
+  console.warn("[STRIPE WEBHOOK] Could not resolve Supabase user ID.");
+  return null;
+}
 async function updateProfileFromSubscription(
   supabaseUserId: string,
   subscription: Stripe.Subscription,
@@ -108,8 +152,14 @@ async function updateProfileFromSubscription(
     throw new Error(error.message);
   }
 
+  console.log("[STRIPE WEBHOOK] Update attempt result:", {
+  supabaseUserId,
+  updatedRowCount: data?.length ?? 0,
+  data,
+});
   console.log("[STRIPE WEBHOOK] Updated rows:", data);
 }
+
 
 async function updateProfileFromCheckoutSession(session: Stripe.Checkout.Session) {
   const supabase = createAdminClient();
@@ -118,7 +168,9 @@ async function updateProfileFromCheckoutSession(session: Stripe.Checkout.Session
   const supabaseUserId = session.metadata?.supabase_user_id ?? null;
 
   if (!supabaseUserId) {
-    console.warn("[STRIPE WEBHOOK] checkout.session.completed missing supabase_user_id");
+    console.warn(
+      "[STRIPE WEBHOOK] checkout.session.completed missing supabase_user_id"
+    );
     return;
   }
 
@@ -134,10 +186,17 @@ async function updateProfileFromCheckoutSession(session: Stripe.Checkout.Session
     .eq("id", supabaseUserId)
     .select("id, stripe_customer_id, plan_tier, subscription_status");
 
+    console.log("[STRIPE WEBHOOK] Checkout session update attempt result:", {
+  supabaseUserId,
+  updatedRowCount: data?.length ?? 0,
+  data,
+});
+
   console.log("[STRIPE WEBHOOK] Checkout session profile update:", {
     supabaseUserId,
     data,
     error,
+
   });
 
   if (error) {
@@ -191,6 +250,7 @@ export async function POST(request: Request) {
           const customerId = getStripeCustomerId(subscription.customer);
           const supabaseUserId = await resolveSupabaseUserId({
             metadataUserId: subscription.metadata?.supabase_user_id,
+            fallbackUserId: session.metadata?.supabase_user_id ?? null,
             customerId,
           });
 
@@ -204,6 +264,7 @@ export async function POST(request: Request) {
             console.warn(
               "[STRIPE WEBHOOK] Could not resolve Supabase user from checkout session subscription",
               {
+                sessionId: session.id,
                 subscriptionId: session.subscription,
                 customerId,
               }
