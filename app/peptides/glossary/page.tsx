@@ -13,9 +13,11 @@ export default function PeptideGlossaryPage() {
         </h1>
 
         <p className="mt-4 text-sm leading-7 text-[var(--color-muted)]">
-          A structured reference guide to key terms used in peptide science,
-          covering foundational biology, signalling pathways, and cellular
-          systems.
+          Welcome to our comprehensive glossary of peptide-related terms. This guide is designed to help you understand the fundamental concepts and key terms in peptide science, from amino acids to cellular contexts.
+        </p>
+
+        <p className="mt-4 text-sm leading-7 text-[var(--color-muted)]">
+          Peptides, comprising amino acids linked by peptide bonds, are a fundamental category of biological molecules with pivotal roles in cellular processes and scientific research applications. Understanding the dichotomy between agonists and antagonists and their interaction with cellular receptors is essential for comprehending the mechanistic basis of peptide function in biological systems.
         </p>
       </section>
 
@@ -48,12 +50,12 @@ export default function PeptideGlossaryPage() {
 
           <GlossaryItem
             title="Mitochondrial Peptides"
-            description="Peptides that influence mitochondrial function, involved in energy production and apoptosis."
+            description="Peptides that are encoded by mitochondrial DNA or influence mitochondrial function, involved in energy production and apoptosis."
           />
 
           <GlossaryItem
             title="Neuropeptides"
-            description="Small protein-like molecules used by neurons to communicate with each other in signalling pathways."
+            description="Small protein-like molecules used by neurons to communicate with each other, involved in many physiological signalling pathways studied in neuroscience research."
           />
 
           <GlossaryItem
@@ -63,22 +65,22 @@ export default function PeptideGlossaryPage() {
 
           <GlossaryItem
             title="Peptide Bond"
-            description="A covalent bond formed between amino acids when the carboxyl group of one reacts with the amino group of another."
+            description="A covalent chemical bond formed between two amino acid molecules when the carboxyl group of one molecule reacts with the amino group of the other molecule, releasing a molecule of water (H2O)."
           />
 
           <GlossaryItem
             title="Peptide Hormones"
-            description="Chains of amino acids that function as hormones, such as insulin and glucagon."
+            description="Chains of amino acids that function as hormones in the body, such as insulin and glucagon, which are involved in metabolic signalling pathways."
           />
 
           <GlossaryItem
             title="Peptidomimetics"
-            description="Synthetic molecules designed to mimic the biological activity of peptides with improved stability or specificity."
+            description="Small protein-like chains designed to mimic the biological activity of a natural peptide but with enhanced stability, bioavailability, or specificity."
           />
 
           <GlossaryItem
             title="Polypeptide"
-            description="A long chain of amino acids. Chains over ~50 amino acids are typically considered proteins."
+            description="A long, continuous chain of amino acids. Polypeptides with more than 50 amino acids are typically considered proteins."
           />
 
           <GlossaryItem
@@ -88,17 +90,17 @@ export default function PeptideGlossaryPage() {
 
           <GlossaryItem
             title="Somatostatin"
-            description="A peptide hormone that inhibits the release of several other hormones, including growth hormone."
+            description="A peptide hormone that inhibits the release of several other hormones, including growth hormone and insulin, playing a critical role in the endocrine system."
           />
 
           <GlossaryItem
             title="Signal Peptide"
-            description="A short peptide that directs a protein to specific locations in or outside the cell."
+            description="A short peptide present at the N-terminus of a protein that directs the protein to specific destinations within or outside the cell."
           />
 
           <GlossaryItem
             title="Synthetic Peptides"
-            description="Artificially created peptides used in research to mimic or modify natural peptide function."
+            description="Peptides that are artificially made using peptide synthesis techniques, often designed to mimic or modify the function of natural peptides for research purposes."
           />
         </div>
       </section>
@@ -112,42 +114,42 @@ export default function PeptideGlossaryPage() {
         <div className="mt-4 grid gap-4">
           <GlossaryItem
             title="Cell Membrane"
-            description="The semipermeable membrane surrounding a cell, regulating movement of substances in and out."
+            description="The semipermeable membrane surrounding the cytoplasm of a cell, which regulates the passage of substances in and out of the cell."
           />
 
           <GlossaryItem
             title="Cytokines"
-            description="Proteins involved in cell signalling, particularly within the immune system."
+            description="Small proteins released by cells that have a specific effect on the interactions and communications between cells, often involved in immune responses."
           />
 
           <GlossaryItem
             title="Endoplasmic Reticulum (ER)"
-            description="A cellular structure involved in protein and lipid synthesis."
+            description="A network of membranous tubules within the cytoplasm of a cell, involved in protein and lipid synthesis."
           />
 
           <GlossaryItem
             title="Golgi Apparatus"
-            description="An organelle that modifies, sorts, and packages proteins for transport."
+            description="An organelle in cells that modifies, sorts, and packages proteins for secretion or delivery to other organelles."
           />
 
           <GlossaryItem
             title="Ligand"
-            description="A molecule that binds to a receptor and influences its function."
+            description="A molecule that binds to a specific site on a protein, such as a receptor, influencing the function of the protein."
           />
 
           <GlossaryItem
             title="Mitochondria"
-            description="Organelles responsible for energy production through cellular respiration."
+            description="Organelles found in large numbers in most cells, involved in the production of energy through aerobic respiration."
           />
 
           <GlossaryItem
             title="Nucleus"
-            description="The cell structure that contains genetic material (DNA)."
+            description="TA membrane-bound organelle within eukaryotic cells that contains the genetic material (DNA)."
           />
 
           <GlossaryItem
             title="Ribosome"
-            description="A molecular structure that synthesises proteins from messenger RNA."
+            description="A complex molecular machine found within all living cells that performs the synthesis of proteins according to the sequence of messenger RNA (mRNA)."
           />
         </div>
       </section>

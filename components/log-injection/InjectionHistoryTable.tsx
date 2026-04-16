@@ -1,17 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
-type InjectionHistoryRow = {
+export type InjectionActivityRow = {
   id: string;
-  injection_at: string;
-  dose_amount: number;
-  dose_unit: string;
+  type: "done" | "missed" | "upcoming";
   peptide_name: string;
+  scheduled_at: string;
+  dose_amount?: number | null;
+  dose_unit?: string | null;
+  plan_id?: string | null;
+  plan_name?: string | null;
 };
 
 type Props = {
-  logs: InjectionHistoryRow[];
+  items: InjectionActivityRow[];
+  initialStatus?: "upcoming" | "missed" | "done";
 };
 
 function startOfDay(date: Date) {
@@ -49,86 +54,144 @@ function formatDateTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "UTC",
   }).format(new Date(value));
 }
 
-function getUniquePeptides(logs: InjectionHistoryRow[]) {
-  return Array.from(new Set(logs.map((log) => log.peptide_name))).sort((a, b) =>
+function getUniquePeptides(items: InjectionActivityRow[]) {
+  return Array.from(new Set(items.map((item) => item.peptide_name))).sort((a, b) =>
     a.localeCompare(b)
   );
 }
 
-export default function InjectionHistoryTable({ logs }: Props) {
+function getActionLabel(type: InjectionActivityRow["type"]) {
+  if (type === "done") return "Logged";
+  if (type === "missed") return "Log now";
+  return "Prepare";
+}
+
+export default function InjectionHistoryTable({
+  items,
+  initialStatus = "upcoming",
+}: Props) {
+  const [statusFilter, setStatusFilter] = useState<"upcoming" | "missed" | "done">(
+    initialStatus
+  );
   const [search, setSearch] = useState("");
   const [selectedPeptide, setSelectedPeptide] = useState("");
   const [dateFilter, setDateFilter] = useState<
     "all" | "today" | "week" | "month" | "specific"
   >("all");
   const [specificDate, setSpecificDate] = useState("");
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [pageSize, setPageSize] = useState<7 | 10>(7);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const peptides = useMemo(() => getUniquePeptides(logs), [logs]);
+  const peptides = useMemo(() => getUniquePeptides(items), [items]);
 
-  const filteredLogs = useMemo(() => {
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, search, selectedPeptide, dateFilter, specificDate, pageSize]);
+
+  const filteredItems = useMemo(() => {
     const now = new Date();
     const searchLower = search.trim().toLowerCase();
 
-    return logs.filter((log) => {
-      const logDate = new Date(log.injection_at);
+    return items.filter((item) => {
+      const itemDate = new Date(item.scheduled_at);
+
+      const matchesStatus = item.type === statusFilter;
 
       const matchesSearch =
         !searchLower ||
-        log.peptide_name.toLowerCase().includes(searchLower) ||
-        `${log.dose_amount} ${log.dose_unit}`.toLowerCase().includes(searchLower);
+        item.peptide_name.toLowerCase().includes(searchLower) ||
+        `${item.dose_amount ?? ""} ${item.dose_unit ?? ""}`
+          .toLowerCase()
+          .includes(searchLower) ||
+        (item.plan_name ?? "").toLowerCase().includes(searchLower);
 
       const matchesPeptide =
-        !selectedPeptide || log.peptide_name === selectedPeptide;
+        !selectedPeptide || item.peptide_name === selectedPeptide;
 
       let matchesDate = true;
 
       if (dateFilter === "today") {
-        matchesDate = logDate >= startOfDay(now) && logDate <= endOfDay(now);
+        matchesDate = itemDate >= startOfDay(now) && itemDate <= endOfDay(now);
       } else if (dateFilter === "week") {
-        matchesDate = logDate >= startOfWeek(now) && logDate <= endOfDay(now);
+        matchesDate = itemDate >= startOfWeek(now) && itemDate <= endOfDay(now);
       } else if (dateFilter === "month") {
-        matchesDate = logDate >= startOfMonth(now) && logDate <= endOfDay(now);
+        matchesDate = itemDate >= startOfMonth(now) && itemDate <= endOfDay(now);
       } else if (dateFilter === "specific") {
         if (!specificDate) {
           matchesDate = false;
         } else {
           const selected = new Date(specificDate);
           matchesDate =
-            logDate >= startOfDay(selected) && logDate <= endOfDay(selected);
+            itemDate >= startOfDay(selected) && itemDate <= endOfDay(selected);
         }
       }
 
-      return matchesSearch && matchesPeptide && matchesDate;
+      return matchesStatus && matchesSearch && matchesPeptide && matchesDate;
     });
-  }, [logs, search, selectedPeptide, dateFilter, specificDate]);
+  }, [items, statusFilter, search, selectedPeptide, dateFilter, specificDate]);
 
-  const visibleLogs = filteredLogs.slice(0, visibleCount);
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const visibleItems = filteredItems.slice(startIndex, startIndex + pageSize);
 
   const hasActiveFilters =
     search.trim() !== "" ||
     selectedPeptide !== "" ||
     dateFilter !== "all";
 
+  const sectionDescription =
+    statusFilter === "upcoming"
+      ? "Planned injections that are still coming up."
+      : statusFilter === "missed"
+        ? "Missed injections that still need to be logged."
+        : "Completed injections you have already logged.";
+
   return (
     <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-[var(--color-text)]">
-            Injection History
-          </h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Searchable history of your recent logged injections.
-          </p>
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+              Injection Activity
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              {sectionDescription}
+            </p>
+          </div>
+
+          <span className="inline-flex w-fit rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-muted)]">
+            {filteredItems.length} {filteredItems.length === 1 ? "entry" : "entries"}
+          </span>
         </div>
 
-        <span className="inline-flex w-fit rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-muted)]">
-          {filteredLogs.length} {filteredLogs.length === 1 ? "entry" : "entries"}
-        </span>
+        <div className="flex flex-wrap gap-2">
+          {(["upcoming", "missed", "done"] as const).map((status) => {
+            const active = statusFilter === status;
+
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`rounded-full px-3 py-2 text-sm font-medium transition ${
+                  active
+                    ? "bg-[var(--color-accent)] text-white"
+                    : "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
+                }`}
+              >
+                {status === "upcoming"
+                  ? "Upcoming"
+                  : status === "missed"
+                    ? "Missed"
+                    : "Done"}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -137,21 +200,15 @@ export default function InjectionHistoryTable({ logs }: Props) {
             <input
               type="text"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setVisibleCount(20);
-              }}
-              placeholder="Search peptide or dose"
-              title="Search peptide or dose"
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search peptide, dose, or plan"
+              title="Search peptide, dose, or plan"
               className="min-w-0 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
             />
 
             <select
               value={selectedPeptide}
-              onChange={(e) => {
-                setSelectedPeptide(e.target.value);
-                setVisibleCount(20);
-              }}
+              onChange={(e) => setSelectedPeptide(e.target.value)}
               className="min-w-0 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 pr-8 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)]"
             >
               <option value="">All peptides</option>
@@ -168,7 +225,6 @@ export default function InjectionHistoryTable({ logs }: Props) {
                 setDateFilter(
                   e.target.value as "all" | "today" | "week" | "month" | "specific"
                 );
-                setVisibleCount(20);
                 if (e.target.value !== "specific") {
                   setSpecificDate("");
                 }
@@ -183,7 +239,25 @@ export default function InjectionHistoryTable({ logs }: Props) {
             </select>
           </div>
 
-          <div className="mt-2 flex justify-end">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="page-size"
+                className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]"
+              >
+                Show
+              </label>
+              <select
+                id="page-size"
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value) as 7 | 10)}
+                className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)]"
+              >
+                <option value={7}>7</option>
+                <option value={10}>10</option>
+              </select>
+            </div>
+
             <button
               type="button"
               onClick={() => {
@@ -191,7 +265,8 @@ export default function InjectionHistoryTable({ logs }: Props) {
                 setSelectedPeptide("");
                 setDateFilter("all");
                 setSpecificDate("");
-                setVisibleCount(20);
+                setPageSize(7);
+                setCurrentPage(1);
               }}
               className="text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]"
             >
@@ -204,10 +279,7 @@ export default function InjectionHistoryTable({ logs }: Props) {
               <input
                 type="date"
                 value={specificDate}
-                onChange={(e) => {
-                  setSpecificDate(e.target.value);
-                  setVisibleCount(20);
-                }}
+                onChange={(e) => setSpecificDate(e.target.value)}
                 className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-accent)] focus:bg-white"
               />
 
@@ -241,71 +313,115 @@ export default function InjectionHistoryTable({ logs }: Props) {
               {dateFilter === "today"
                 ? "Today"
                 : dateFilter === "week"
-                ? "This week"
-                : dateFilter === "month"
-                ? "This month"
-                : specificDate || "Select a date"}
+                  ? "This week"
+                  : dateFilter === "month"
+                    ? "This month"
+                    : specificDate || "Select a date"}
             </span>
           ) : null}
         </div>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
-        <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_auto] gap-3 bg-[var(--color-surface-muted)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)] md:grid">
-          <div>Peptide</div>
-          <div>Injection date/time</div>
-          <div>Dosage</div>
-          <div>Actions</div>
-        </div>
-
-        {!visibleLogs.length ? (
+                <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+       <div
+  className="grid gap-0 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]"
+  style={{ gridTemplateColumns: "1.15fr 1fr auto" }}
+>
+  <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+    Peptide + Plan
+  </div>
+  <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+    Scheduled Date/Time
+  </div>
+  <div className="px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+    Action
+  </div>
+</div>
+        {!visibleItems.length ? (
           <div className="p-6 text-sm text-[var(--color-muted)]">
-            No injections match your filters.
+            No entries match your filters.
           </div>
         ) : (
           <div className="divide-y divide-[var(--color-border)]">
-            {visibleLogs.map((log) => (
-              <div key={log.id} className="px-4 py-3">
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_auto] md:items-center">
-                  <div className="min-w-0">
+            {visibleItems.map((item) => {
+              const actionHref =
+                item.type === "done"
+                  ? null
+                  : `/log-injection?status=${item.type}&planId=${encodeURIComponent(
+                      item.plan_id ?? ""
+                    )}&injectionAt=${encodeURIComponent(item.scheduled_at)}`;
+
+              return (
+                <div
+                  key={item.id}
+                  className="grid gap-0"
+                  style={{ gridTemplateColumns: "1.15fr 1fr auto" }}
+                >
+                  <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
                     <p className="text-sm font-medium text-[var(--color-text)]">
-                      {log.peptide_name}
+                      {item.peptide_name}
+                    </p>
+                    {item.plan_name ? (
+                      <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        {item.plan_name}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
+                    <p className="text-sm text-[var(--color-text)]">
+                      {formatDateTime(item.scheduled_at)}
                     </p>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-[var(--color-muted)]">
-                      {formatDateTime(log.injection_at)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-[var(--color-muted)]">
-                      {log.dose_amount} {log.dose_unit}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-start md:justify-end">
-                    <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
-                      ✓ Done
-                    </span>
+                  <div className="flex items-center px-4 py-3">
+                    {actionHref ? (
+                      <Link
+                        href={actionHref}
+                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)] whitespace-nowrap"
+                      >
+                        {getActionLabel(item.type)}
+                      </Link>
+                    ) : (
+                      <span className="inline-flex min-h-10 items-center rounded-xl bg-green-50 px-3 py-2 text-sm font-medium text-green-700 whitespace-nowrap">
+                        Logged
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {filteredLogs.length > visibleCount ? (
-        <div className="mt-4 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setVisibleCount((count) => count + 20)}
-            className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
-          >
-            Show 20 more
-          </button>
+      {filteredItems.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-[var(--color-muted)]">
+            Page {safeCurrentPage} of {totalPages}
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={safeCurrentPage === 1}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+              disabled={safeCurrentPage >= totalPages}
+              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </div>
       ) : null}
     </section>
