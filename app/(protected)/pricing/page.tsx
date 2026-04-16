@@ -8,7 +8,23 @@ type PlanTier = "free" | "pro";
 type BillingProfile = {
   plan_tier?: string | null;
   subscription_status?: string | null;
+  stripe_customer_id?: string | null;
 };
+
+const PRO_PRICE_DISPLAY = "£4.99/mo";
+
+function getPricingErrorMessage(error?: string) {
+  switch (error) {
+    case "not-pro-subscriber":
+      return "Only active Pro subscribers can open subscription management.";
+    case "no-billing-customer":
+      return "This account has Pro access, but no Stripe billing profile is linked yet.";
+    case "portal-unavailable":
+      return "Subscription management is temporarily unavailable. Please try again.";
+    default:
+      return null;
+  }
+}
 
 function FeatureRow({
   label,
@@ -38,8 +54,6 @@ function PlanCard({
   highlighted = false,
   ctaLabel,
   ctaHref,
-  secondaryLabel,
-  secondaryHref,
   customPrimaryCta,
 }: {
   name: string;
@@ -51,8 +65,6 @@ function PlanCard({
   highlighted?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
-  secondaryLabel?: string;
-  secondaryHref?: string;
   customPrimaryCta?: React.ReactNode;
 }) {
   return (
@@ -122,15 +134,6 @@ function PlanCard({
             {ctaLabel}
           </Link>
         ) : null}
-
-        {secondaryLabel && secondaryHref ? (
-          <Link
-            href={secondaryHref}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
-          >
-            {secondaryLabel}
-          </Link>
-        ) : null}
       </div>
     </section>
   );
@@ -155,7 +158,14 @@ function FAQItem({
   );
 }
 
-export default async function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const pricingError = getPricingErrorMessage(resolvedSearchParams.error);
+
   const supabase = await createClient();
 
   const {
@@ -165,7 +175,7 @@ export default async function PricingPage() {
   const { data: profileData, error: profileError } = user
     ? await supabase
         .from("profiles")
-        .select("plan_tier, subscription_status")
+        .select("plan_tier, subscription_status, stripe_customer_id")
         .eq("id", user.id)
         .maybeSingle()
     : { data: null, error: null };
@@ -174,11 +184,15 @@ export default async function PricingPage() {
     throw new Error(profileError.message);
   }
 
+  const profile = (profileData ?? undefined) as BillingProfile | undefined;
+
   const planTier: PlanTier = getEffectivePlanTierForUser(
     user?.email,
-    (profileData ?? undefined) as BillingProfile | undefined
+    profile
   );
+
   const isPro = planTier === "pro";
+  const hasBillingCustomer = Boolean(profile?.stripe_customer_id);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
@@ -196,27 +210,23 @@ export default async function PricingPage() {
               unlimited plans, deeper history, and more advanced tracking tools.
             </p>
           </div>
-
-       {/*   <div className="mt-4 flex flex-wrap gap-2">
-            <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-              Mobile-first
-           </span>
-            <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-              Simple v1 pricing
-           </span>
-            <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-             One paid tier
-            </span>
-          </div> */}
         </section>
+
+        {pricingError ? (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+            <p className="text-sm font-medium text-amber-900">
+              {pricingError}
+            </p>
+          </section>
+        ) : null}
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <PlanCard
             name="Free"
             badge={!isPro ? "Current plan" : undefined}
-            description="Great for getting started with PEPTIQ."
+            description="Great for getting started with PEPT|IQ."
             price="£0"
-            billingNote="Includes the core PEPTIQ tracking experience."
+            billingNote="Includes the core PEPT|IQ tracking experience."
             features={[
               "Up to 2 active plans",
               "30-day history",
@@ -224,21 +234,21 @@ export default async function PricingPage() {
               "Basic reminders",
               "Peptide library access",
             ]}
-            ctaLabel={!isPro ? "Current plan" : "View Profile"}
-            ctaHref="/profile"
-            secondaryLabel="Back to Profile"
-            secondaryHref="/profile"
+            ctaLabel={!isPro ? "Current plan" : undefined}
+            ctaHref={!isPro ? "/pricing" : undefined}
           />
 
           <PlanCard
             name="Pro"
             badge={isPro ? "Current plan" : "Recommended"}
             description="For ongoing tracking, deeper insight, and less friction."
-            price={isPro ? "Included" : "Monthly subscription"}
+            price={`Pro · ${PRO_PRICE_DISPLAY}`}
             billingNote={
-              isPro
-                ? "Your account already has Pro access."
-                : "Checkout is handled securely with Stripe."
+              isPro && hasBillingCustomer
+                ? "Manage your subscription, payment method, or cancellation in Stripe."
+                : isPro
+                  ? "Pro access is active on this account."
+                  : "Checkout is handled securely with Stripe."
             }
             features={[
               "Unlimited active plans",
@@ -249,18 +259,21 @@ export default async function PricingPage() {
             ]}
             highlighted
             customPrimaryCta={
-            isPro ? (
-  <Link
-  href="/manage-subscription"
-  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--color-text)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
->
-  Manage subscription
-</Link>
-) : (
+              isPro && hasBillingCustomer ? (
+                <Link
+                  href="/manage-subscription"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--color-text)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+                >
+                  Manage subscription
+                </Link>
+              ) : isPro ? (
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-muted)]">
+                  Subscription management is not available yet for this profile.
+                </div>
+              ) : (
                 <UpgradeToProButton />
               )
             }
-           
           />
         </section>
 
@@ -316,7 +329,7 @@ export default async function PricingPage() {
               Why upgrade
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Pro is designed for people using PEPTIQ as an ongoing tool, not
+              Pro is designed for people using PEPT|IQ as an ongoing tool, not
               just a reference app.
             </p>
 
@@ -365,44 +378,21 @@ export default async function PricingPage() {
           <div className="space-y-4">
             <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
               <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-                Current account
-              </h2>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                {user?.email ?? "Signed in"}
-              </p>
-
-              <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-                  Current plan
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-lg font-semibold text-[var(--color-text)]">
-                    {isPro ? "Pro" : "Free"}
-                  </span>
-                 
-                </div>
-              </div>
-
-           
-            </div>
-
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
-              <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
                 Questions
               </h2>
 
               <div className="mt-4 space-y-3">
                 <FAQItem
-                  question="Can I use PEPTIQ for free?"
+                  question="Can I use PEPT|IQ for free?"
                   answer="Yes. Free keeps the core experience useful, including logging, the calculator, and up to 2 active plans."
                 />
                 <FAQItem
                   question="What happens when Pro launches?"
-                  answer="The upgrade path on this page now starts secure Stripe checkout. Subscription status is then synced back into your PEPTIQ account."
+                  answer="The upgrade path on this page starts secure Stripe checkout. Subscription status is then synced back into your PEPT|IQ account."
                 />
                 <FAQItem
                   question="Will I be able to cancel?"
-                  answer="Yes. The Pro flow is being designed around simple subscription management and cancellation."
+                  answer="Yes. Pro members should be able to manage billing, payment methods, and cancellation through the Stripe customer portal."
                 />
               </div>
             </div>

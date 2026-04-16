@@ -17,10 +17,10 @@ export async function GET() {
       data: { user },
     } = await supabase.auth.getUser();
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
     if (!user) {
-      return NextResponse.redirect(
-        new URL("/login", process.env.NEXT_PUBLIC_APP_URL)
-      );
+      return NextResponse.redirect(new URL("/login", appUrl));
     }
 
     const { data: profileData, error: profileError } = await supabase
@@ -34,25 +34,19 @@ export async function GET() {
     }
 
     const profile = (profileData ?? undefined) as BillingProfile | undefined;
-
     const planTier = getEffectivePlanTierForUser(user.email, profile);
 
     if (planTier !== "pro") {
       return NextResponse.redirect(
-        new URL("/pricing", process.env.NEXT_PUBLIC_APP_URL)
+        new URL("/pricing?error=not-pro-subscriber", appUrl)
       );
-    }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) {
-      throw new Error("Missing NEXT_PUBLIC_APP_URL.");
     }
 
     const customerId = profile?.stripe_customer_id;
 
     if (!customerId) {
       return NextResponse.redirect(
-        new URL("/profile?error=no-billing-customer", appUrl)
+        new URL("/pricing?error=no-billing-customer", appUrl)
       );
     }
 
@@ -60,7 +54,7 @@ export async function GET() {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${appUrl}/profile`,
+      return_url: `${appUrl}/pricing`,
     });
 
     return NextResponse.redirect(session.url);
@@ -68,11 +62,9 @@ export async function GET() {
     console.error("STRIPE PORTAL SESSION ERROR:", error);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const message =
-      error instanceof Error ? error.message : "Could not open billing portal.";
 
     return NextResponse.redirect(
-      new URL(`/profile?error=${encodeURIComponent(message)}`, appUrl)
+      new URL("/pricing?error=portal-unavailable", appUrl)
     );
   }
 }

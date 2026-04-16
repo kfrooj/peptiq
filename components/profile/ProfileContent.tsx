@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getEffectivePlanTierForUser } from "@/lib/billing/getEffectivePlanTier";
+import {
+  getAccessSourceForUser,
+  getEffectivePlanTierForUser,
+  type AccessSource,
+} from "@/lib/billing/getEffectivePlanTier";
 import {
   ChangePasswordForm,
   InviteFriendCard,
@@ -21,6 +25,7 @@ type ProfileRow = {
   plan_tier: string | null;
   subscription_status: string | null;
   subscription_current_period_end: string | null;
+  stripe_customer_id?: string | null;
 };
 
 function formatJoinedDate(dateString?: string | null) {
@@ -47,6 +52,85 @@ function formatBillingDate(dateString?: string | null) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function getSubscriptionCardMeta(args: {
+  isPro: boolean;
+  accessSource: AccessSource;
+  subscriptionStatus: string | null;
+  subscriptionPeriodEnd: string | null;
+  hasBillingCustomer: boolean;
+}) {
+  const {
+    isPro,
+    accessSource,
+    subscriptionStatus,
+    subscriptionPeriodEnd,
+    hasBillingCustomer,
+  } = args;
+
+  if (!isPro) {
+    return {
+      supportingText:
+        "Up to 2 active plans, 30-day history, and core tracking tools.",
+      statusLabel: null as string | null,
+      buttonLabel: "Upgrade to Pro",
+      buttonHref: "/pricing",
+      buttonVariant: "primary" as const,
+    };
+  }
+
+  if (accessSource === "admin_bypass") {
+    return {
+      supportingText:
+        "Unlimited plans, full history, and advanced tracking tools.",
+      statusLabel: "Admin access includes Pro features on this account.",
+      buttonLabel: null as string | null,
+      buttonHref: null as string | null,
+      buttonVariant: "secondary" as const,
+    };
+  }
+
+  if (accessSource === "subscription" && hasBillingCustomer) {
+    const statusText = subscriptionStatus
+      ? `Billing status: ${subscriptionStatus}${
+          subscriptionPeriodEnd ? ` · Renews through ${subscriptionPeriodEnd}` : ""
+        }`
+      : subscriptionPeriodEnd
+        ? `Renews through ${subscriptionPeriodEnd}`
+        : "Subscription is active on this account.";
+
+    return {
+      supportingText:
+        "Unlimited plans, full history, and advanced tracking tools.",
+      statusLabel: statusText,
+      buttonLabel: "Manage Subscription",
+      buttonHref: "/manage-subscription",
+      buttonVariant: "secondary" as const,
+    };
+  }
+
+  if (accessSource === "profile_override") {
+    return {
+      supportingText:
+        "Unlimited plans, full history, and advanced tracking tools.",
+      statusLabel:
+        "Pro access is active on this account. Stripe subscription management is not linked.",
+      buttonLabel: "View Pricing",
+      buttonHref: "/pricing",
+      buttonVariant: "secondary" as const,
+    };
+  }
+
+  return {
+    supportingText:
+      "Unlimited plans, full history, and advanced tracking tools.",
+    statusLabel:
+      "Pro access is active on this account. Billing details are not available.",
+    buttonLabel: "View Pricing",
+    buttonHref: "/pricing",
+    buttonVariant: "secondary" as const,
+  };
 }
 
 async function updateName(
@@ -321,7 +405,8 @@ export default async function ProfileContent() {
         notification_missed_alerts,
         plan_tier,
         subscription_status,
-        subscription_current_period_end
+        subscription_current_period_end,
+        stripe_customer_id
       `
     )
     .eq("id", userId)
@@ -339,11 +424,21 @@ export default async function ProfileContent() {
   const joinedDate = formatJoinedDate(user.created_at);
 
   const planTier = getEffectivePlanTierForUser(user.email, profile ?? undefined);
+  const accessSource = getAccessSourceForUser(user.email, profile ?? undefined);
   const isPro = planTier === "pro";
-  const subscriptionStatus = profile?.subscription_status ?? "inactive";
+  const subscriptionStatus = profile?.subscription_status ?? null;
   const subscriptionPeriodEnd = formatBillingDate(
     profile?.subscription_current_period_end
   );
+  const hasBillingCustomer = Boolean(profile?.stripe_customer_id);
+
+  const subscriptionMeta = getSubscriptionCardMeta({
+    isPro,
+    accessSource,
+    subscriptionStatus,
+    subscriptionPeriodEnd,
+    hasBillingCustomer,
+  });
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
@@ -389,26 +484,26 @@ export default async function ProfileContent() {
                     <p className="text-xl font-semibold text-[var(--color-text)]">
                       {isPro ? "Pro" : "Free"}
                     </p>
-                    
+                    {isPro ? (
+                      <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[var(--color-accent)]">
+                        {accessSource === "admin_bypass"
+                          ? "Admin access"
+                          : accessSource === "subscription"
+                            ? "Subscriber"
+                            : "Pro access"}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>
 
               <p className="mt-3 text-sm text-[var(--color-muted)]">
-                {isPro
-                  ? "Unlimited plans, full history, and advanced tracking tools."
-                  : "Up to 2 active plans, 30-day history, and core tracking tools."}
+                {subscriptionMeta.supportingText}
               </p>
 
-              {isPro ? (
+              {subscriptionMeta.statusLabel ? (
                 <p className="mt-2 text-xs text-[var(--color-muted)]">
-                  Status:{" "}
-                  <span className="font-medium text-[var(--color-text)]">
-                    {subscriptionStatus}
-                  </span>
-                  {subscriptionPeriodEnd
-                    ? ` · Renews through ${subscriptionPeriodEnd}`
-                    : ""}
+                  {subscriptionMeta.statusLabel}
                 </p>
               ) : null}
 
@@ -426,18 +521,20 @@ export default async function ProfileContent() {
                 </div>
               </div>
 
-              <div className="mt-4">
-                <Link
-                  href={isPro ? "/manage-subscription" : "/pricing"}
-                  className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                    isPro
-                      ? "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
-                      : "bg-[var(--color-text)] text-white hover:opacity-90"
-                  }`}
-                >
-                  {isPro ? "Manage Subscription" : "Upgrade to Pro"}
-                </Link>
-              </div>
+              {subscriptionMeta.buttonLabel && subscriptionMeta.buttonHref ? (
+                <div className="mt-4">
+                  <Link
+                    href={subscriptionMeta.buttonHref}
+                    className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                      subscriptionMeta.buttonVariant === "primary"
+                        ? "bg-[var(--color-text)] text-white hover:opacity-90"
+                        : "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
+                    }`}
+                  >
+                    {subscriptionMeta.buttonLabel}
+                  </Link>
+                </div>
+              ) : null}
             </div>
           </SectionCard>
         </div>

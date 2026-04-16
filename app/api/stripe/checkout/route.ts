@@ -1,13 +1,59 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe/server";
-import { getEffectivePlanTierForUser } from "@/lib/billing/getEffectivePlanTier";
+import { getAccessSourceForUser } from "@/lib/billing/getEffectivePlanTier";
 
 type BillingProfile = {
   plan_tier?: string | null;
   subscription_status?: string | null;
   stripe_customer_id?: string | null;
 };
+
+async function ensureStripeCustomer(args: {
+  stripe: ReturnType<typeof getStripe>;
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  email?: string | null;
+  existingCustomerId?: string | null;
+}) {
+  const { stripe, supabase, userId, email, existingCustomerId } = args;
+
+  if (existingCustomerId) {
+    try {
+      const existingCustomer = await stripe.customers.retrieve(existingCustomerId);
+
+      if (!("deleted" in existingCustomer && existingCustomer.deleted)) {
+        return existingCustomer.id;
+      }
+    } catch (error) {
+      console.warn("Saved Stripe customer could not be retrieved, creating a new one.", {
+        userId,
+        existingCustomerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const customer = await stripe.customers.create({
+    email: email ?? undefined,
+    metadata: {
+      supabase_user_id: userId,
+    },
+  });
+
+  const { error: updateProfileError } = await supabase
+    .from("profiles")
+    .update({
+      stripe_customer_id: customer.id,
+    })
+    .eq("id", userId);
+
+  if (updateProfileError) {
+    throw new Error(updateProfileError.message);
+  }
+
+  return customer.id;
+}
 
 export async function POST() {
   try {
@@ -38,10 +84,23 @@ export async function POST() {
     }
 
     const profile = (profileData ?? undefined) as BillingProfile | undefined;
+    const accessSource = getAccessSourceForUser(user.email, profile);
 
-    const effectiveTier = getEffectivePlanTierForUser(user.email, profile);
+    if (accessSource === "subscription") {
+      return NextResponse.json(
+        { error: "This account already has an active Pro subscription." },
+        { status: 400 }
+      );
+    }
 
-    if (effectiveTier === "pro") {
+    if (accessSource === "admin_bypass") {
+      return NextResponse.json(
+        { error: "This admin account already has Pro access without billing." },
+        { status: 400 }
+      );
+    }
+
+    if (accessSource === "profile_override") {
       return NextResponse.json(
         { error: "This account already has Pro access." },
         { status: 400 }
@@ -67,32 +126,13 @@ export async function POST() {
 
     const stripe = getStripe();
 
-    let customerId = profile?.stripe_customer_id ?? null;
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
-        metadata: {
-          supabase_user_id: user.id,
-        },
-      });
-
-      customerId = customer.id;
-
-      const { error: updateProfileError } = await supabase
-        .from("profiles")
-        .update({
-          stripe_customer_id: customerId,
-        })
-        .eq("id", user.id);
-
-      if (updateProfileError) {
-        return NextResponse.json(
-          { error: updateProfileError.message },
-          { status: 500 }
-        );
-      }
-    }
+    const customerId = await ensureStripeCustomer({
+      stripe,
+      supabase,
+      userId: user.id,
+      email: user.email,
+      existingCustomerId: profile?.stripe_customer_id ?? null,
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
