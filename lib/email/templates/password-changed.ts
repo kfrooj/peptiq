@@ -5,47 +5,63 @@ type PasswordChangedEmailParams = {
   supportEmail: string;
 };
 
+function escapeHtml(str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export function getPasswordChangedEmail({
-  appName = "PEPTIQ",
+  appName = "PEPT|IQ",
   supportEmail,
 }: PasswordChangedEmailParams) {
-  const subject = `Your ${appName} password was changed`;
+  const safeAppName = escapeHtml(appName);
+  const safeSupportEmail = escapeHtml(supportEmail);
+
+  const subject = `Your ${appName} password has been changed`;
 
   const bodyHtml = `
-    <p>Your password was successfully updated.</p>
+    <p style="margin:0 0 16px 0;">
+      Your password has been successfully changed.
+    </p>
 
     <div style="margin:16px 0;padding:12px 14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
-      <div><strong>Account:</strong> Your ${appName} login</div>
-      <div><strong>Status:</strong> Password updated</div>
+      <div style="margin:0 0 6px 0;"><strong>Account:</strong> Your ${safeAppName} login</div>
+      <div><strong>Status:</strong> Password changed</div>
     </div>
 
-    <p>
+    <p style="margin:16px 0 0 0;">
       If you made this change, no further action is needed.
     </p>
 
-    <p>
-      If this was not you, contact support immediately at
-      <a href="mailto:${supportEmail}" style="color:#2563eb;text-decoration:none;">${supportEmail}</a>.
+    <p style="margin:16px 0 0 0;">
+      If this wasn’t you, please contact support immediately at
+      <a href="mailto:${safeSupportEmail}" style="color:#2563eb;text-decoration:none;">
+        ${safeSupportEmail}
+      </a>.
     </p>
   `;
 
   const html = renderBaseEmailLayout({
-    title: "Your password was changed",
-    intro: "This is a security confirmation for your PEPTIQ account.",
+    title: "Password changed",
+    intro: `This is a security confirmation for your ${appName} account.`,
     bodyHtml,
     footerNote:
-      "If you did not expect this change, contact support as soon as possible.",
+      "If you did not expect this change, we recommend resetting your password immediately.",
   });
 
   const text = [
-    "Your password was successfully updated.",
+    "Password changed",
+    "",
+    `Your ${appName} password has been successfully changed.`,
     "",
     `Account: Your ${appName} login`,
-    "Status: Password updated",
+    "Status: Password changed",
     "",
     "If you made this change, no further action is needed.",
     "",
-    `If this was not you, contact support immediately at ${supportEmail}.`,
+    `If this wasn’t you, contact support immediately at ${supportEmail}.`,
   ].join("\n");
 
   return { subject, html, text };

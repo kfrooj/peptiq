@@ -10,19 +10,19 @@ type ScheduledInjectionRow = {
   plan_id: string;
   scheduled_for: string;
   timezone: string | null;
-  plan_name: string | null;
-  dose_amount: number | null;
-  dose_unit: string | null;
   status: string;
-  reminder_sent_at: string | null;
+  missed_alert_sent_at: string | null;
+  completed_at: string | null;
 };
 
 type ProfileRow = {
   id: string;
   name: string | null;
-  notification_email_reminders: boolean | null;
+  notification_missed_alerts: boolean | null;
   timezone: string | null;
 };
+
+const MISSED_ALERT_GRACE_HOURS = 2;
 
 function formatScheduledLabel(
   scheduledFor: string,
@@ -48,8 +48,12 @@ export async function GET(request: Request) {
     }
 
     const supabase = createAdminClient();
-    const nowIso = new Date().toISOString();
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://peptiq.uk";
+
+    const now = new Date();
+    const cutoff = new Date(
+      now.getTime() - MISSED_ALERT_GRACE_HOURS * 60 * 60 * 1000
+    ).toISOString();
 
     const { data: scheduledInjections, error } = await supabase
       .from("scheduled_injections")
@@ -59,21 +63,20 @@ export async function GET(request: Request) {
         plan_id,
         scheduled_for,
         timezone,
-        plan_name,
-        dose_amount,
-        dose_unit,
         status,
-        reminder_sent_at
+        missed_alert_sent_at,
+        completed_at
       `)
       .eq("status", "pending")
-      .is("reminder_sent_at", null)
-      .lte("scheduled_for", nowIso)
+      .is("completed_at", null)
+      .is("missed_alert_sent_at", null)
+      .lte("scheduled_for", cutoff)
       .limit(50);
 
     if (error) {
-      console.error("Scheduled injections fetch error:", error);
+      console.error("Missed alerts fetch error:", error);
       return NextResponse.json(
-        { ok: false, error: "Failed to fetch scheduled injections" },
+        { ok: false, error: "Failed to fetch missed scheduled injections" },
         { status: 500 }
       );
     }
@@ -88,14 +91,14 @@ export async function GET(request: Request) {
           await Promise.all([
             supabase
               .from("profiles")
-              .select("id, name, notification_email_reminders, timezone")
+              .select("id, name, notification_missed_alerts, timezone")
               .eq("id", injection.user_id)
               .maybeSingle(),
             supabase.auth.admin.getUserById(injection.user_id),
           ]);
 
         if (authUserError) {
-          console.error("Reminder auth lookup error:", {
+          console.error("Missed alert auth lookup error:", {
             injectionId: injection.id,
             userId: injection.user_id,
             error: authUserError,
@@ -108,15 +111,15 @@ export async function GET(request: Request) {
         const typedProfile = profile as ProfileRow | null;
         const email = authUserResult.user?.email ?? null;
 
-        if (!typedProfile?.notification_email_reminders || !email) {
+        if (!typedProfile?.notification_missed_alerts || !email) {
           skipped += 1;
 
-          console.log("Skipping injection reminder email", {
+          console.log("Skipping missed alert email", {
             injectionId: injection.id,
             userId: injection.user_id,
             hasEmail: Boolean(email),
-            emailRemindersEnabled:
-              typedProfile?.notification_email_reminders ?? false,
+            missedAlertsEnabled:
+              typedProfile?.notification_missed_alerts ?? false,
           });
 
           await supabase
@@ -140,11 +143,8 @@ export async function GET(request: Request) {
 
         const appUrl = `${siteUrl}/plans/${injection.plan_id}`;
 
-        const emailContent = getInjectionReminderEmail({
+        const emailContent = getMissedInjectionAlertEmail({
           userName: typedProfile.name,
-          planName: injection.plan_name ?? "Injection plan",
-          doseAmount: injection.dose_amount,
-          doseUnit: injection.dose_unit,
           scheduledLabel,
           appUrl,
         });
@@ -156,7 +156,7 @@ export async function GET(request: Request) {
           text: emailContent.text,
           fromType: "default",
           tags: [
-            { name: "category", value: "injection-reminder" },
+            { name: "category", value: "missed-injection-alert" },
             { name: "scheduled_injection_id", value: injection.id },
             { name: "plan_id", value: injection.plan_id },
           ],
@@ -165,19 +165,19 @@ export async function GET(request: Request) {
         await supabase
           .from("scheduled_injections")
           .update({
-            reminder_sent_at: new Date().toISOString(),
+            missed_alert_sent_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", injection.id);
 
         sent += 1;
-      } catch (err) {
+      } catch (error) {
         failed += 1;
 
-        console.error("Injection reminder send error:", {
+        console.error("Missed alert send error:", {
           injectionId: injection.id,
           userId: injection.user_id,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
 
         await supabase
@@ -197,10 +197,10 @@ export async function GET(request: Request) {
       failed,
     });
   } catch (error) {
-    console.error("Injection reminder cron fatal error:", error);
+    console.error("Missed alerts cron fatal error:", error);
 
     return NextResponse.json(
-      { ok: false, error: "Unexpected failure" },
+      { ok: false, error: "Unexpected missed alert failure" },
       { status: 500 }
     );
   }

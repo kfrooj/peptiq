@@ -1,8 +1,26 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 type EmailFromType = "default" | "security" | "support";
+
+type SendPeptiqEmailParams = {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  fromType?: EmailFromType;
+  replyTo?: string | string[];
+  tags?: { name: string; value: string }[];
+};
+
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing RESEND_API_KEY");
+  }
+
+  return new Resend(apiKey);
+}
 
 function getFromAddress(type: EmailFromType = "default") {
   const map = {
@@ -11,7 +29,13 @@ function getFromAddress(type: EmailFromType = "default") {
     support: process.env.RESEND_FROM_SUPPORT,
   };
 
-  return map[type] ?? map.default;
+  const from = map[type] ?? map.default;
+
+  if (!from) {
+    throw new Error(`Missing FROM email for type: ${type}`);
+  }
+
+  return from;
 }
 
 export async function sendPeptiqEmail({
@@ -20,47 +44,43 @@ export async function sendPeptiqEmail({
   html,
   text,
   fromType = "default",
-}: {
-  to: string | string[];
-  subject: string;
-  html: string;
-  text?: string;
-  fromType?: EmailFromType;
-}) {
+  replyTo,
+  tags,
+}: SendPeptiqEmailParams) {
+  const resend = getResendClient();
   const from = getFromAddress(fromType);
+  const normalizedTo = Array.isArray(to) ? to : [to];
 
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("Missing RESEND_API_KEY");
-  }
-
-  if (!from) {
-    throw new Error(`Missing FROM email for type: ${fromType}`);
-  }
-
-console.log("Sending email", {
-  to,
-  subject,
-  fromType,
-  from,
-});
+  console.log("Sending PEPT|IQ email", {
+    to: normalizedTo,
+    subject,
+    fromType,
+    from,
+    tags,
+  });
 
   const { data, error } = await resend.emails.send({
     from,
-    to,
+    to: normalizedTo,
     subject,
     html,
     text,
+    replyTo,
+    tags,
   });
 
   if (error) {
-  console.error("Resend email error:", {
-    to,
-    subject,
-    fromType,
-    error,
-  });
+    console.error("Resend email error", {
+      to: normalizedTo,
+      subject,
+      fromType,
+      from,
+      tags,
+      error,
+    });
 
-  throw new Error(error.message || "Failed to send email");
-}
+    throw new Error(error.message || "Failed to send email");
+  }
+
   return data;
 }
