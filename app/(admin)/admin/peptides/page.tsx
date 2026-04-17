@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminPeptideFilters from "@/components/AdminPeptideFilters";
-
+import AdminPublishToggleButton from "@/components/AdminPublishToggleButton";
 
 const PAGE_SIZE = 10;
 
@@ -12,6 +11,30 @@ type SearchParams = Promise<{
   q?: string;
   category?: string;
 }>;
+
+type ProfileRow = {
+  role: string | null;
+};
+
+type PeptideRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  default_vial_mg: number | null;
+  default_mixing_volume_ml: number | null;
+  default_sample_size_mcg: number | null;
+  published: boolean | null;
+  updated_at: string | null;
+};
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString();
+}
 
 export default async function AdminPeptidesPage({
   searchParams,
@@ -39,7 +62,9 @@ export default async function AdminPeptidesPage({
     throw new Error(profileError.message);
   }
 
-  if (profile?.role !== "admin") {
+  const currentProfile = profile as ProfileRow | null;
+
+  if (currentProfile?.role !== "admin") {
     redirect("/");
   }
 
@@ -90,7 +115,9 @@ export default async function AdminPeptidesPage({
 
   let peptidesQuery = supabase
     .from("peptides")
-    .select("*")
+    .select(
+      "id, name, category, default_vial_mg, default_mixing_volume_ml, default_sample_size_mcg, published, updated_at"
+    )
     .order("name", { ascending: true })
     .range(from, to);
 
@@ -102,122 +129,59 @@ export default async function AdminPeptidesPage({
     peptidesQuery = peptidesQuery.eq("category", category);
   }
 
-  const { data: peptides, error } = await peptidesQuery;
+  const { data: peptides, error: peptidesError } = await peptidesQuery;
 
-  if (error) {
-    throw new Error(error.message);
+  if (peptidesError) {
+    throw new Error(peptidesError.message);
   }
+
+  const typedPeptides = (peptides ?? []) as PeptideRow[];
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          
+          <p className="text-sm font-medium text-[var(--color-accent)]">Admin</p>
           <h1 className="mt-1 text-3xl font-bold text-[var(--color-text)]">
-            Admin Hub
+            Manage Peptides
           </h1>
-          
+          <p className="mt-2 text-sm text-[var(--color-muted)]">
+            Search, filter, import, export, and edit peptide reference content.
+          </p>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin"
+            className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+          >
+            Back to Admin Hub
+          </Link>
+
+          <Link
+            href="/api/admin/export"
+            className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+          >
+            Export CSV
+          </Link>
+
+          <Link
+            href="/admin/import"
+            className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
+          >
+            Import CSV
+          </Link>
+
+          <Link
+            href="/admin/peptides/new"
+            className="rounded-xl bg-[var(--color-accent)] px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+          >
+            Add peptide
+          </Link>
+        </div>
       </div>
 
-      <section className="mb-8 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">
-              Manage Users
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Internal-only tools for testing, support, and future account
-              management.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Link
-            href="/admin/reset-password"
-            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 transition hover:-translate-y-0.5 hover:shadow-sm"
-          >
-            <h3 className="text-base font-semibold text-[var(--color-text)]">
-              Reset User Password
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-              Manually reset a user password for testing or support without using
-              the forgot password flow.
-            </p>
-            <div className="mt-3 text-sm font-medium text-[var(--color-accent)]">
-              Open →
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/users"
-            className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 transition hover:-translate-y-0.5 hover:shadow-sm"
-          >
-            <h3 className="text-base font-semibold text-[var(--color-text)]">
-              User Lookup
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-              Search for a user by email and view basic account details for
-              testing or support.
-            </p>
-            <div className="mt-3 text-sm font-medium text-[var(--color-accent)]">
-              Open →
-            </div>
-          </Link>
-
-          <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-white p-4">
-            <h3 className="text-base font-semibold text-[var(--color-text)]">
-              Account Actions
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-              Reserve this space for future tools like role updates, access
-              flags, subscription controls, or support actions.
-            </p>
-            <div className="mt-3 text-sm font-medium text-[var(--color-muted)]">
-              Coming soon
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-[var(--color-text)]">
-              Manage Peptides
-            </h2>
-            <p className="mt-2 text-sm text-[var(--color-muted)]">
-              Search, filter, and open a peptide record to edit its structured
-              reference content.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/api/admin/export"
-              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
-            >
-              Export CSV
-            </Link>
-
-            <Link
-              href="/admin/import"
-              className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)]"
-            >
-              Import CSV
-            </Link>
-
-            <Link
-              href="/admin/peptides/new"
-              className="rounded-xl bg-[var(--color-accent)] px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
-            >
-              Add peptide
-            </Link>
-          </div>
-        </div>
-
         <AdminPeptideFilters
           initialQuery={query}
           initialCategory={category}
@@ -252,14 +216,17 @@ export default async function AdminPeptidesPage({
                     Published
                   </th>
                   <th className="px-4 py-3 text-sm font-semibold text-[var(--color-text)]">
+                    Last updated
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold text-[var(--color-text)]">
                     Action
                   </th>
                 </tr>
               </thead>
 
               <tbody>
-                {peptides?.length ? (
-                  peptides.map((peptide) => (
+                {typedPeptides.length ? (
+                  typedPeptides.map((peptide) => (
                     <tr
                       key={peptide.id}
                       className="border-b last:border-b-0 hover:bg-[var(--color-surface-muted)]/50"
@@ -319,8 +286,12 @@ export default async function AdminPeptidesPage({
                         </span>
                       </td>
 
+                      <td className="px-4 py-3 text-sm text-[var(--color-text)]">
+                        {formatDateTime(peptide.updated_at)}
+                      </td>
+
                       <td className="px-4 py-3 text-sm">
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                           <Link
                             href={`/admin/peptides/${peptide.id}/edit`}
                             className="text-[var(--color-accent)] underline"
@@ -340,6 +311,11 @@ export default async function AdminPeptidesPage({
                           >
                             Calculator
                           </Link>
+
+                          <AdminPublishToggleButton
+                            peptideId={peptide.id}
+                            published={Boolean(peptide.published)}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -347,10 +323,28 @@ export default async function AdminPeptidesPage({
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-4 py-8 text-center text-sm text-[var(--color-muted)]"
                     >
-                      No peptides found for this search.
+                      <div className="flex flex-col items-center gap-3">
+                        <p>No peptides found for this search.</p>
+
+                        <div className="flex flex-wrap justify-center gap-3">
+                          <Link
+                            href="/admin/peptides"
+                            className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                          >
+                            Clear filters
+                          </Link>
+
+                          <Link
+                            href="/admin/peptides/new"
+                            className="rounded-xl bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+                          >
+                            Add peptide
+                          </Link>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 )}

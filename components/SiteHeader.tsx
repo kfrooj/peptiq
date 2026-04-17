@@ -25,6 +25,14 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function AdminBadge() {
+  return (
+    <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
+      Admin
+    </span>
+  );
+}
+
 export default function SiteHeader({ user, isAdmin }: Props) {
   const pathname = usePathname();
 
@@ -86,8 +94,6 @@ export default function SiteHeader({ user, isAdmin }: Props) {
     { href: "/plans", label: "Plans" },
   ];
 
-  const loggedInSecondaryNav: NavItem[] = [];
-
   const toolsNav: NavItem[] = [
     { href: "/log-injection", label: "Injection" },
     { href: "/wellness", label: "Wellness" },
@@ -97,7 +103,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
 
   const profileNav: NavItem[] = [
     { href: "/profile", label: "Profile" },
-    ...(isAdmin ? [{ href: "/admin/peptides", label: "Admin" }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin hub" }] : []),
   ];
 
   const primaryNav = user ? loggedInPrimaryNav : publicPrimaryNav;
@@ -206,6 +212,8 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                   ) : null}
                 </div>
 
+                {isAdmin ? <AdminBadge /> : null}
+
                 <div className="relative" ref={profileMenuRef}>
                   <button
                     type="button"
@@ -297,6 +305,8 @@ export default function SiteHeader({ user, isAdmin }: Props) {
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
+            {user && isAdmin ? <AdminBadge /> : null}
+
             <button
               type="button"
               onClick={() => setMobileMenuOpen((open) => !open)}
@@ -361,6 +371,12 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                   <div className="px-2 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Account
                   </div>
+
+                  {isAdmin ? (
+                    <div className="px-4 py-1">
+                      <AdminBadge />
+                    </div>
+                  ) : null}
 
                   {profileNav.map((item) => {
                     const active = isActivePath(pathname, item.href);

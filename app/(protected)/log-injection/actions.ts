@@ -14,7 +14,7 @@ type CreateInjectionLogInput = {
   notes?: string | null;
 };
 
-const ALLOWED_DOSE_UNITS = new Set(["mcg", "mg", "IU", "mL"]);
+const ALLOWED_DOSE_UNITS = new Set(["mcg", "mg", "iu", "ml"]);
 
 function isValidDateString(value: string) {
   const date = new Date(value);

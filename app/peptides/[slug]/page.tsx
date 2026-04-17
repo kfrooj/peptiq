@@ -1,32 +1,87 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getPeptideBySlug } from "@/lib/peptides";
+import { createClient } from "@/lib/supabase/server";
 import PeptideFavoriteStarButton from "@/components/PeptideFavoriteStarButton";
 
-export default async function PeptideDetailPage({
-  params,
-}: {
+type PageProps = {
   params: Promise<{ slug: string }>;
-}) {
+};
+
+type PeptideRow = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  benefits: string | null;
+  reference_dose_low: string | null;
+  reference_dose_typical: string | null;
+  reference_dose_high: string | null;
+  frequency_reference: string | null;
+  references: string | null;
+  default_vial_mg: number | null;
+  default_mixing_volume_ml: number | null;
+  default_sample_size_mcg: number | null;
+  typical_research_protocol: string | null;
+  duration: string | null;
+  general_administration_rules: string | null;
+  published: boolean | null;
+};
+
+export default async function PeptideDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const peptide = await getPeptideBySlug(slug);
+  const supabase = await createClient();
+
+  const { data: peptide, error } = await supabase
+    .from("peptides")
+    .select(
+      `
+        id,
+        slug,
+        name,
+        category,
+        description,
+        benefits,
+        reference_dose_low,
+        reference_dose_typical,
+        reference_dose_high,
+        frequency_reference,
+        references,
+        default_vial_mg,
+        default_mixing_volume_ml,
+        default_sample_size_mcg,
+        typical_research_protocol,
+        duration,
+        general_administration_rules,
+        published
+      `
+    )
+    .eq("slug", slug)
+    .eq("published", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   if (!peptide) {
     notFound();
   }
 
+  const typedPeptide = peptide as PeptideRow;
+
   const description =
-    getOptionalField(peptide, [
+    getOptionalField(typedPeptide, [
       "description",
       "summary",
       "short_description",
       "overview",
     ]) || "Structured reference information for educational browsing only.";
 
-  const reportedEffects = toBulletList(peptide.benefits);
+  const reportedEffects = toBulletList(typedPeptide.benefits);
 
   const lowDose =
-    getOptionalField(peptide, [
+    getOptionalField(typedPeptide, [
       "reference_dose_low",
       "low_dose",
       "dose_low",
@@ -34,7 +89,7 @@ export default async function PeptideDetailPage({
     ]) || "Not added yet.";
 
   const typicalDose =
-    getOptionalField(peptide, [
+    getOptionalField(typedPeptide, [
       "reference_dose_typical",
       "typical_dose",
       "dose_typical",
@@ -43,7 +98,7 @@ export default async function PeptideDetailPage({
     ]) || "Not added yet.";
 
   const highDose =
-    getOptionalField(peptide, [
+    getOptionalField(typedPeptide, [
       "reference_dose_high",
       "high_dose",
       "dose_high",
@@ -51,7 +106,7 @@ export default async function PeptideDetailPage({
     ]) || "Not added yet.";
 
   const frequencyReference =
-    getOptionalField(peptide, [
+    getOptionalField(typedPeptide, [
       "frequency_reference",
       "frequency",
       "duration",
@@ -59,13 +114,13 @@ export default async function PeptideDetailPage({
       "typical_research_protocol",
     ]) || "No information added yet.";
 
-  const researchLinks = parseReferenceLinks(peptide.references);
+  const researchLinks = parseReferenceLinks(typedPeptide.references);
 
-  const categoryLabel = peptide.category?.trim() || "Peptide";
+  const categoryLabel = typedPeptide.category?.trim() || "Peptide";
   const hasCalculatorDefaults =
-    peptide.default_vial_mg ||
-    peptide.default_mixing_volume_ml ||
-    peptide.default_sample_size_mcg;
+    typedPeptide.default_vial_mg ||
+    typedPeptide.default_mixing_volume_ml ||
+    typedPeptide.default_sample_size_mcg;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
@@ -83,7 +138,7 @@ export default async function PeptideDetailPage({
             </p>
 
             <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl">
-              {peptide.name}
+              {typedPeptide.name}
             </h1>
 
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-muted)]">
@@ -92,19 +147,19 @@ export default async function PeptideDetailPage({
 
             {hasCalculatorDefaults ? (
               <div className="mt-5 flex flex-wrap gap-2">
-                {peptide.default_vial_mg ? (
+                {typedPeptide.default_vial_mg ? (
                   <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
-                    Default vial: {peptide.default_vial_mg} mg
+                    Default vial: {typedPeptide.default_vial_mg} mg
                   </span>
                 ) : null}
-                {peptide.default_mixing_volume_ml ? (
+                {typedPeptide.default_mixing_volume_ml ? (
                   <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
-                    Default mix: {peptide.default_mixing_volume_ml} mL
+                    Default mix: {typedPeptide.default_mixing_volume_ml} mL
                   </span>
                 ) : null}
-                {peptide.default_sample_size_mcg ? (
+                {typedPeptide.default_sample_size_mcg ? (
                   <span className="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text)]">
-                    Default sample: {peptide.default_sample_size_mcg} mcg
+                    Default sample: {typedPeptide.default_sample_size_mcg} mcg
                   </span>
                 ) : null}
               </div>
@@ -129,7 +184,7 @@ export default async function PeptideDetailPage({
               </div>
 
               <div className="shrink-0">
-                <PeptideFavoriteStarButton peptideId={peptide.id} />
+                <PeptideFavoriteStarButton peptideId={typedPeptide.id} />
               </div>
             </div>
 
@@ -143,10 +198,10 @@ export default async function PeptideDetailPage({
 
               <Link
                 href={`/calculator?peptide=${encodeURIComponent(
-                  peptide.name
-                )}&vialMg=${peptide.default_vial_mg ?? ""}&mixMl=${
-                  peptide.default_mixing_volume_ml ?? ""
-                }&sampleMcg=${peptide.default_sample_size_mcg ?? ""}`}
+                  typedPeptide.name
+                )}&vialMg=${typedPeptide.default_vial_mg ?? ""}&mixMl=${
+                  typedPeptide.default_mixing_volume_ml ?? ""
+                }&sampleMcg=${typedPeptide.default_sample_size_mcg ?? ""}`}
                 className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
               >
                 Open calculator
@@ -277,14 +332,14 @@ function toBulletList(content: string | null): string[] {
     .filter(Boolean);
 
   if (lines.length > 1) {
-    return lines.map((line) => line.replace(/^[-•*]\s?/, "").trim());
+    return lines.map((line) => line.replace(/^[-•*○]\s?/, "").trim());
   }
 
   return content
-    .split(/[\n•;-]+/)
+    .split(/[\n•;○-]+/)
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => item.replace(/^[-•*]\s?/, "").trim());
+    .map((item) => item.replace(/^[-•*○]\s?/, "").trim());
 }
 
 function parseReferenceLinks(content: string | null): Array<{

@@ -335,8 +335,8 @@ export default function NewInjectionLogForm({
           >
             <option value="mcg">mcg</option>
             <option value="mg">mg</option>
-            <option value="IU">IU</option>
-            <option value="mL">mL</option>
+            <option value="IU">iu</option>
+            <option value="mL">ml</option>
           </select>
         </Field>
       </div>

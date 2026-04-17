@@ -675,12 +675,13 @@ export default async function DashboardContent() {
             </p>
           </div>
 
-          <Link
+      {/* <Link
             href="/profile"
             className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
           >
             Manage Favorites
           </Link>
+      */}
         </div>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

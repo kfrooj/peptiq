@@ -1,200 +1,156 @@
-"use client";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import AdminPeptideForm from "@/components/AdminPeptideForm";
 
-import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+type ProfileRow = {
+  role: string | null;
+};
 
-export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+type PeptideRow = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string | null;
+  description: string | null;
+  benefits: string | null;
+  typical_research_protocol: string | null;
+  duration: string | null;
+  common_sides_regulatory: string | null;
+  most_popular_stacks: string | null;
+  general_administration_rules: string | null;
+  references: string | null;
+  disclaimer: string | null;
+  published: boolean | null;
+  featured: boolean | null;
+  featured_order: number | null;
+  image_url: string | null;
+  default_vial_mg: number | null;
+  default_mixing_volume_ml: number | null;
+  default_sample_size_mcg: number | null;
+  reference_dose_low: string | null;
+  reference_dose_typical: string | null;
+  reference_dose_high: string | null;
+  frequency_reference: string | null;
+};
 
-  const router = useRouter();
+type PageProps = {
+  params: Promise<{
+    id: string;
+  }>;
+};
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setMessage(null);
-    setIsLoading(true);
+export default async function AdminEditPeptidePage({ params }: PageProps) {
+  const { id } = await params;
+  const supabase = await createClient();
 
-    const supabase = createClient();
-    const trimmedEmail = email.trim().toLowerCase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    try {
-      if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-
-        if (error) {
-          const lowerMessage = error.message.toLowerCase();
-
-          if (
-            lowerMessage.includes("invalid") ||
-            lowerMessage.includes("credentials")
-          ) {
-            setError("Invalid email or password.");
-          } else {
-            setError(error.message);
-          }
-
-          setIsLoading(false);
-          return;
-        }
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setError("Login failed.");
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-
-        if (profile?.role === "admin") {
-          router.push("/admin/peptides");
-        } else {
-          router.push("/dashboard");
-        }
-
-        router.refresh();
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-        });
-
-        if (error) {
-          const lowerMessage = error.message.toLowerCase();
-
-          if (
-            lowerMessage.includes("already") ||
-            lowerMessage.includes("exists")
-          ) {
-            setError("An account with this email already exists. Try logging in.");
-          } else {
-            setError(error.message);
-          }
-
-          setIsLoading(false);
-          return;
-        }
-
-        setMessage(
-          "Account created. Check your email if confirmation is required, then log in."
-        );
-        setMode("login");
-        setPassword("");
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
-    }
-
-    setIsLoading(false);
+  if (!user) {
+    redirect("/login");
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  const currentProfile = profile as ProfileRow | null;
+
+  if (currentProfile?.role !== "admin") {
+    redirect("/");
+  }
+
+  const { data: peptide, error: peptideError } = await supabase
+    .from("peptides")
+    .select(
+      `
+        id,
+        name,
+        slug,
+        category,
+        description,
+        benefits,
+        typical_research_protocol,
+        duration,
+        common_sides_regulatory,
+        most_popular_stacks,
+        general_administration_rules,
+        references,
+        disclaimer,
+        published,
+        featured,
+        featured_order,
+        image_url,
+        default_vial_mg,
+        default_mixing_volume_ml,
+        default_sample_size_mcg,
+        reference_dose_low,
+        reference_dose_typical,
+        reference_dose_high,
+        frequency_reference
+      `
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (peptideError) {
+    throw new Error(peptideError.message);
+  }
+
+  if (!peptide) {
+    notFound();
+  }
+
+  const typedPeptide = peptide as PeptideRow;
+
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-md items-center p-6">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full rounded-xl border bg-white p-6 shadow-sm"
-      >
-        <h1 className="mb-6 text-2xl font-bold text-[var(--color-text)]">
-          {mode === "login" ? "Login" : "Create account"}
-        </h1>
-
-        <div className="mb-6 flex rounded-xl bg-[var(--color-surface-muted)] p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("login");
-              setError(null);
-              setMessage(null);
-            }}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-              mode === "login"
-                ? "bg-[var(--color-accent)] text-white"
-                : "text-[var(--color-text)]"
-            }`}
-          >
-            Login
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signup");
-              setError(null);
-              setMessage(null);
-            }}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-              mode === "signup"
-                ? "bg-[var(--color-accent)] text-white"
-                : "text-[var(--color-text)]"
-            }`}
-          >
-            Sign up
-          </button>
+    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-[var(--color-accent)]">Admin</p>
+          <h1 className="mt-1 text-3xl font-bold text-[var(--color-text)]">
+            Edit Peptide
+          </h1>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">
+            Update reference content, calculator defaults, display settings, and
+            publishing controls for{" "}
+            <span className="font-medium text-[var(--color-text)]">
+              {typedPeptide.name}
+            </span>
+            .
+          </p>
         </div>
 
-        <label className="mb-3 block">
-          <span className="mb-1 block text-sm font-medium">Email</span>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            className="w-full rounded-md border px-3 py-2"
-            required
-          />
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/peptides"
+            className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+          >
+            Back to peptides
+          </Link>
 
-        <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-medium">Password</span>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            className="w-full rounded-md border px-3 py-2"
-            required
-          />
-        </label>
+          <Link
+            href={`/calculator?peptide=${encodeURIComponent(
+              typedPeptide.name
+            )}&vialMg=${typedPeptide.default_vial_mg ?? ""}&mixMl=${
+              typedPeptide.default_mixing_volume_ml ?? ""
+            }&sampleMcg=${typedPeptide.default_sample_size_mcg ?? ""}`}
+            className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+          >
+            Open calculator
+          </Link>
+        </div>
+      </div>
 
-        {error ? (
-          <p className="mb-3 text-sm text-red-600">{error}</p>
-        ) : null}
-
-        {message ? (
-          <p className="mb-3 text-sm text-green-600">{message}</p>
-        ) : null}
-
-        <button
-          disabled={isLoading}
-          className={`w-full rounded-xl px-4 py-2 text-white shadow-sm transition ${
-            isLoading
-              ? "cursor-not-allowed bg-gray-400"
-              : "bg-[var(--color-accent)] hover:opacity-90"
-          }`}
-        >
-          {isLoading
-            ? mode === "login"
-              ? "Logging in..."
-              : "Creating account..."
-            : mode === "login"
-            ? "Sign in"
-            : "Create account"}
-        </button>
-      </form>
+      <AdminPeptideForm peptide={typedPeptide} />
     </main>
   );
 }

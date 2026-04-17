@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 import ImageUploadField from "@/components/ImageUploadField";
 
 function slugify(value: string) {
@@ -10,15 +12,28 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function cleanText(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function cleanNumber(value: string) {
+  if (!value.trim()) return null;
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 type Props = {
   peptide?: {
     id?: string;
-    name?: string;
-    slug?: string;
-    category?: string;
+    name?: string | null;
+    slug?: string | null;
+    category?: string | null;
     description?: string | null;
     benefits?: string | null;
     typical_research_protocol?: string | null;
@@ -28,10 +43,10 @@ type Props = {
     general_administration_rules?: string | null;
     references?: string | null;
     disclaimer?: string | null;
-    published?: boolean;
-    featured?: boolean;
+    published?: boolean | null;
+    featured?: boolean | null;
     featured_order?: number | null;
-    image_url: string | null;
+    image_url?: string | null;
     default_vial_mg?: number | null;
     default_mixing_volume_ml?: number | null;
     default_sample_size_mcg?: number | null;
@@ -44,6 +59,9 @@ type Props = {
 
 export default function AdminPeptideForm({ peptide }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+
+  const isEditMode = Boolean(peptide?.id);
 
   const [name, setName] = useState(peptide?.name ?? "");
   const [slug, setSlug] = useState(peptide?.slug ?? "");
@@ -100,65 +118,104 @@ export default function AdminPeptideForm({ peptide }: Props) {
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
     setError(null);
+    setIsSaving(true);
+
+    const resolvedSlug = slugify(slug || name);
+
+    if (!name.trim()) {
+      setError("Peptide name is required.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!resolvedSlug) {
+      setError("Slug is required.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (!category.trim()) {
+      setError("Category is required.");
+      setIsSaving(false);
+      return;
+    }
 
     const payload = {
-      name,
-      slug: slug || slugify(name),
-      category,
-      description,
-      benefits: reportedEffects,
+      name: name.trim(),
+      slug: resolvedSlug,
+      category: category.trim(),
+      description: cleanText(description),
+      benefits: cleanText(reportedEffects),
 
-      // New slug-page-aligned fields
-      reference_dose_low: referenceDoseLow || null,
-      reference_dose_typical: referenceDoseTypical || null,
-      reference_dose_high: referenceDoseHigh || null,
-      frequency_reference: frequencyReference || null,
+      reference_dose_low: cleanText(referenceDoseLow),
+      reference_dose_typical: cleanText(referenceDoseTypical),
+      reference_dose_high: cleanText(referenceDoseHigh),
+      frequency_reference: cleanText(frequencyReference),
 
-      // Keep legacy fields populated too for compatibility
-      typical_research_protocol: referenceDoseTypical || null,
-      duration: frequencyReference || null,
-      general_administration_rules: frequencyReference || null,
+      // Legacy compatibility fields kept populated for older UI/content usage
+      typical_research_protocol: cleanText(referenceDoseTypical),
+      duration: cleanText(frequencyReference),
+      general_administration_rules: cleanText(frequencyReference),
 
-      // Keep older optional content fields intact but blank if unused
       common_sides_regulatory: peptide?.common_sides_regulatory ?? null,
       most_popular_stacks: peptide?.most_popular_stacks ?? null,
 
-      references,
-      disclaimer,
+      references: cleanText(references),
+      disclaimer: cleanText(disclaimer),
       published,
       featured,
-      featured_order: featuredOrder ? Number(featuredOrder) : null,
-      image_url: imageUrl || null,
-      default_vial_mg: defaultVialMg ? Number(defaultVialMg) : null,
-      default_mixing_volume_ml: defaultMixingVolumeMl
-        ? Number(defaultMixingVolumeMl)
-        : null,
-      default_sample_size_mcg: defaultSampleSizeMcg
-        ? Number(defaultSampleSizeMcg)
-        : null,
+      featured_order: featured ? cleanNumber(featuredOrder) : null,
+      image_url: cleanText(imageUrl),
+      default_vial_mg: cleanNumber(defaultVialMg),
+      default_mixing_volume_ml: cleanNumber(defaultMixingVolumeMl),
+      default_sample_size_mcg: cleanNumber(defaultSampleSizeMcg),
+      updated_at: new Date().toISOString(),
     };
 
     const query = peptide?.id
       ? supabase.from("peptides").update(payload).eq("id", peptide.id)
       : supabase.from("peptides").insert(payload);
 
-    const { error } = await query;
+    const { error: saveError } = await query;
 
-    if (error) {
-      setError(error.message);
+    if (saveError) {
+      setError(saveError.message);
+      setIsSaving(false);
       return;
     }
 
-    setMessage(peptide?.id ? "Peptide updated." : "Peptide created.");
+    setMessage(
+      isEditMode ? "Peptide updated successfully." : "Peptide created successfully."
+    );
+    router.refresh();
+    setIsSaving(false);
   }
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-[var(--color-muted)]">
+            {isEditMode
+              ? "Update peptide content and admin display settings."
+              : "Create a new peptide entry for the library."}
+          </p>
+        </div>
+
+        <Link
+          href="/admin/peptides"
+          className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+        >
+          Back to peptides
+        </Link>
+      </div>
+
       <Section
         title="Description"
         note="Reference information only, not medical advice."
@@ -169,8 +226,12 @@ export default function AdminPeptideForm({ peptide }: Props) {
               className="w-full rounded-xl border px-3 py-2.5"
               value={name}
               onChange={(e) => {
-                setName(e.target.value);
-                if (!slug) setSlug(slugify(e.target.value));
+                const nextName = e.target.value;
+                setName(nextName);
+
+                if (!slug.trim()) {
+                  setSlug(slugify(nextName));
+                }
               }}
               required
             />
@@ -349,7 +410,14 @@ export default function AdminPeptideForm({ peptide }: Props) {
             <input
               type="checkbox"
               checked={featured}
-              onChange={(e) => setFeatured(e.target.checked)}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setFeatured(checked);
+
+                if (!checked) {
+                  setFeaturedOrder("");
+                }
+              }}
             />
             Featured on homepage
           </label>
@@ -362,6 +430,7 @@ export default function AdminPeptideForm({ peptide }: Props) {
               value={featuredOrder}
               onChange={(e) => setFeaturedOrder(e.target.value)}
               placeholder="1"
+              disabled={!featured}
             />
           </Field>
         </div>
@@ -371,8 +440,22 @@ export default function AdminPeptideForm({ peptide }: Props) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <div className="flex justify-start">
-        <button className="rounded-xl bg-[var(--color-accent)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90">
-          Save peptide
+        <button
+          type="submit"
+          disabled={isSaving}
+          className={`rounded-xl px-5 py-2.5 text-sm font-medium text-white shadow-sm transition ${
+            isSaving
+              ? "cursor-not-allowed bg-gray-400"
+              : "bg-[var(--color-accent)] hover:opacity-90"
+          }`}
+        >
+          {isSaving
+            ? isEditMode
+              ? "Saving changes..."
+              : "Creating peptide..."
+            : isEditMode
+              ? "Save peptide"
+              : "Create peptide"}
         </button>
       </div>
     </form>
