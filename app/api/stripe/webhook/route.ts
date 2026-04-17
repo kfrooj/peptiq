@@ -2,6 +2,9 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 import { getStripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendPeptiqEmail } from "@/lib/email/resend";
+import { getSubscriptionActivatedEmail } from "@/lib/email/templates/subscription-activated";
+import { getSubscriptionCancelledEmail } from "@/lib/email/templates/subscription-cancelled";
 
 function mapStripeStatusToProfileStatus(
   status: Stripe.Subscription.Status | string
@@ -60,32 +63,6 @@ async function findSupabaseUserIdFromCustomerId(customerId: string) {
   return data?.id ?? null;
 }
 
-{/*
-async function resolveSupabaseUserId({
-  metadataUserId,
-  customerId,
-  fallbackUserId,
-}: {
-  metadataUserId?: string | null;
-  customerId?: string | null;
-  fallbackUserId?: string | null;
-}) {
-  if (metadataUserId) {
-    return metadataUserId;
-  }
-
-  if (fallbackUserId) {
-    return fallbackUserId;
-  }
-
-  if (customerId) {
-    return await findSupabaseUserIdFromCustomerId(customerId);
-  }
-
-  return null;
-}
-*/}
-
 async function resolveSupabaseUserId({
   metadataUserId,
   customerId,
@@ -120,6 +97,107 @@ async function resolveSupabaseUserId({
   console.warn("[STRIPE WEBHOOK] Could not resolve Supabase user ID.");
   return null;
 }
+
+async function getProfileAndEmail(supabaseUserId: string) {
+  const supabase = createAdminClient();
+
+  const [{ data: profile, error: profileError }, { data: authUserResult, error: authError }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, name")
+        .eq("id", supabaseUserId)
+        .maybeSingle(),
+      supabase.auth.admin.getUserById(supabaseUserId),
+    ]);
+
+  if (profileError) {
+    console.error("[STRIPE WEBHOOK] Profile lookup error:", {
+      supabaseUserId,
+      error: profileError,
+    });
+    return null;
+  }
+
+  if (authError) {
+    console.error("[STRIPE WEBHOOK] Auth user lookup error:", {
+      supabaseUserId,
+      error: authError,
+    });
+    return null;
+  }
+
+  const email = authUserResult.user?.email ?? null;
+  if (!email) {
+    return null;
+  }
+
+  return {
+    name: (profile as { id: string; name: string | null } | null)?.name ?? null,
+    email,
+  };
+}
+
+async function sendSubscriptionActivatedEmail(supabaseUserId: string) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://peptiq.uk";
+  const profile = await getProfileAndEmail(supabaseUserId);
+
+  if (!profile) {
+    console.warn("[STRIPE WEBHOOK] Skipping activation email: missing profile/email", {
+      supabaseUserId,
+    });
+    return;
+  }
+
+  const emailContent = getSubscriptionActivatedEmail({
+    userName: profile.name,
+    appUrl: `${siteUrl}/account`,
+  });
+
+  await sendPeptiqEmail({
+    to: profile.email,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    text: emailContent.text,
+    fromType: "support",
+    replyTo: process.env.SUPPORT_EMAIL || "support@peptiq.uk",
+    tags: [
+      { name: "category", value: "subscription-activated" },
+      { name: "user_id", value: supabaseUserId },
+    ],
+  });
+}
+
+async function sendSubscriptionCancelledEmail(supabaseUserId: string) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://peptiq.uk";
+  const profile = await getProfileAndEmail(supabaseUserId);
+
+  if (!profile) {
+    console.warn("[STRIPE WEBHOOK] Skipping cancellation email: missing profile/email", {
+      supabaseUserId,
+    });
+    return;
+  }
+
+  const emailContent = getSubscriptionCancelledEmail({
+    userName: profile.name,
+    appUrl: `${siteUrl}/pricing`,
+  });
+
+  await sendPeptiqEmail({
+    to: profile.email,
+    subject: emailContent.subject,
+    html: emailContent.html,
+    text: emailContent.text,
+    fromType: "support",
+    replyTo: process.env.SUPPORT_EMAIL || "support@peptiq.uk",
+    tags: [
+      { name: "category", value: "subscription-cancelled" },
+      { name: "user_id", value: supabaseUserId },
+    ],
+  });
+}
+
 async function updateProfileFromSubscription(
   supabaseUserId: string,
   subscription: Stripe.Subscription,
@@ -153,13 +231,12 @@ async function updateProfileFromSubscription(
   }
 
   console.log("[STRIPE WEBHOOK] Update attempt result:", {
-  supabaseUserId,
-  updatedRowCount: data?.length ?? 0,
-  data,
-});
+    supabaseUserId,
+    updatedRowCount: data?.length ?? 0,
+    data,
+  });
   console.log("[STRIPE WEBHOOK] Updated rows:", data);
 }
-
 
 async function updateProfileFromCheckoutSession(session: Stripe.Checkout.Session) {
   const supabase = createAdminClient();
@@ -186,17 +263,16 @@ async function updateProfileFromCheckoutSession(session: Stripe.Checkout.Session
     .eq("id", supabaseUserId)
     .select("id, stripe_customer_id, plan_tier, subscription_status");
 
-    console.log("[STRIPE WEBHOOK] Checkout session update attempt result:", {
-  supabaseUserId,
-  updatedRowCount: data?.length ?? 0,
-  data,
-});
+  console.log("[STRIPE WEBHOOK] Checkout session update attempt result:", {
+    supabaseUserId,
+    updatedRowCount: data?.length ?? 0,
+    data,
+  });
 
   console.log("[STRIPE WEBHOOK] Checkout session profile update:", {
     supabaseUserId,
     data,
     error,
-
   });
 
   if (error) {
@@ -260,6 +336,8 @@ export async function POST(request: Request) {
               subscription,
               "checkout.session.completed -> subscription.retrieve"
             );
+
+            await sendSubscriptionActivatedEmail(supabaseUserId);
           } else {
             console.warn(
               "[STRIPE WEBHOOK] Could not resolve Supabase user from checkout session subscription",
@@ -298,6 +376,10 @@ export async function POST(request: Request) {
           subscription,
           event.type
         );
+
+        if (event.type === "customer.subscription.deleted") {
+          await sendSubscriptionCancelledEmail(supabaseUserId);
+        }
       } else {
         console.warn(
           "[STRIPE WEBHOOK] Could not resolve Supabase user for subscription event",
