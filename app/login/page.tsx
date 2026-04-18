@@ -20,6 +20,10 @@ function getFriendlyAuthError(message: string) {
     return "An account with this email already exists.";
   }
 
+  if (lower.includes("known to be weak") || lower.includes("easy to guess")) {
+    return "That password is too common or easy to guess. Try something more unique.";
+  }
+
   if (
     lower.includes("password should be at least") ||
     lower.includes("at least 8 characters")
@@ -80,7 +84,7 @@ function getPasswordStrength(password: string) {
 
   if (score <= 1) {
     return {
-      label: "Weak",
+      label: "Needs work",
       score,
       barClass: "bg-rose-500",
       textClass: "text-rose-700",
@@ -89,7 +93,7 @@ function getPasswordStrength(password: string) {
 
   if (score <= 3) {
     return {
-      label: "Good",
+      label: "Good start",
       score,
       barClass: "bg-amber-500",
       textClass: "text-amber-700",
@@ -97,7 +101,7 @@ function getPasswordStrength(password: string) {
   }
 
   return {
-    label: "Strong",
+    label: "Meets basic rules",
     score,
     barClass: "bg-emerald-500",
     textClass: "text-emerald-700",
@@ -242,7 +246,8 @@ export default function LoginPage() {
       });
 
       if (error) {
-        console.error("Signup error:", error.message);
+        console.error("Signup error object:", error);
+        console.error("Signup error message:", error.message);
         setError(getFriendlyAuthError(error.message));
         return;
       }
@@ -361,7 +366,7 @@ export default function LoginPage() {
           <div className="mb-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-medium text-[var(--color-text)]">
-                Password strength
+                Password guidance
               </p>
               <p className={`text-xs font-semibold ${passwordStrength.textClass}`}>
                 {passwordStrength.label}
@@ -376,7 +381,7 @@ export default function LoginPage() {
             </div>
 
             <p className="mt-3 text-xs leading-5 text-[var(--color-muted)]">
-              Use at least 8 characters, including a mix of letters, numbers, and symbols.
+              Use at least 8 characters with letters, numbers, and symbols. Avoid common or easy-to-guess passwords.
             </p>
 
             <ul className="mt-3 space-y-2 text-xs">
@@ -397,6 +402,10 @@ export default function LoginPage() {
                 label="Contains a symbol"
               />
             </ul>
+
+            <p className="mt-3 text-xs leading-5 text-[var(--color-muted)]">
+              Tip: common patterns and well-known passwords may still be rejected even if they meet the basic rules.
+            </p>
           </div>
         ) : null}
 
