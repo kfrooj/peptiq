@@ -42,6 +42,10 @@ function getFriendlyAuthError(message: string) {
     return "Your password does not meet the security requirements. Try a longer password with a mix of letters, numbers, and symbols.";
   }
 
+  if (lower.includes("rate limit")) {
+    return "Too many attempts in a short time. Please wait a minute and try again.";
+  }
+
   if (lower.includes("signup")) {
     return "We couldn’t create your account. Please try again.";
   }
@@ -207,6 +211,7 @@ export default function LoginPage() {
           .single();
 
         if (profileError) {
+          console.error("Profile load error after login:", profileError);
           setError("Could not load your account.");
           return;
         }
@@ -257,11 +262,24 @@ export default function LoginPage() {
         return;
       }
 
+      const looksLikeExistingAccount =
+        Array.isArray(data.user.identities) && data.user.identities.length === 0;
+
+      if (looksLikeExistingAccount) {
+        setMessage(
+          "This email may already be registered. Try signing in, checking your inbox for a confirmation email, or resetting your password."
+        );
+        setMode("login");
+        setPassword("");
+        router.replace("/login");
+        return;
+      }
+
       const emailConfirmed = Boolean(data.user.email_confirmed_at);
 
       if (!emailConfirmed) {
         setMessage(
-          "Account created. Check your email to confirm your address before signing in."
+          "Account created. Check your inbox and spam folder for a confirmation email. It can take a minute to arrive."
         );
         setMode("login");
         router.replace("/login");
@@ -275,7 +293,16 @@ export default function LoginPage() {
       setPassword("");
     } catch (err) {
       console.error("Auth form error:", err);
-      setError("Something went wrong. Please try again.");
+
+      if (err instanceof Error) {
+        console.error("Auth form error message:", err.message);
+      }
+
+      setError(
+        mode === "signup"
+          ? "We couldn’t complete sign up right now. Please try again, or check whether this email has already been used."
+          : "Something went wrong. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }

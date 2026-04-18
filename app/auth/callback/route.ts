@@ -1,39 +1,37 @@
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-function getErrorCode(message?: string) {
-  const lower = (message || "").toLowerCase();
+async function handleAuthCallback(request: Request) {
+  const requestUrl = new URL(request.url);
 
-  if (lower.includes("email")) {
-    return "invalid-email";
+  const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") ?? "/dashboard";
+
+  if (!code) {
+    return NextResponse.redirect(
+      new URL("/login?error=missing_auth_code", requestUrl.origin)
+    );
   }
 
-  return "send-failed";
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error("Auth callback error:", error);
+    return NextResponse.redirect(
+      new URL("/login?error=auth_callback_failed", requestUrl.origin)
+    );
+  }
+
+  return NextResponse.redirect(new URL(next, requestUrl.origin));
+}
+
+// ✅ Support BOTH methods
+export async function GET(request: Request) {
+  return handleAuthCallback(request);
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const formData = await request.formData();
-
-  const rawEmail = formData.get("email");
-  const email =
-    typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
-
-  if (!email) {
-    redirect("/forgot-password?error=missing-email");
-  }
-
-  const requestOrigin = new URL(request.url).origin;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestOrigin;
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
-  });
-
-  if (error) {
-    const errorCode = getErrorCode(error.message);
-    redirect(`/forgot-password?error=${errorCode}`);
-  }
-
-  redirect("/forgot-password?success=check-email");
+  return handleAuthCallback(request);
 }
