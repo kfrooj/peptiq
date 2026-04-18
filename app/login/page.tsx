@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -20,8 +20,22 @@ function getFriendlyAuthError(message: string) {
     return "An account with this email already exists.";
   }
 
-  if (lower.includes("password")) {
-    return "Please check your password and try again.";
+  if (
+    lower.includes("password should be at least") ||
+    lower.includes("at least 8 characters")
+  ) {
+    return "Your password must be at least 8 characters long.";
+  }
+
+  if (
+    lower.includes("password") &&
+    (lower.includes("weak") ||
+      lower.includes("secure") ||
+      lower.includes("strength") ||
+      lower.includes("policy") ||
+      lower.includes("character"))
+  ) {
+    return "Your password does not meet the security requirements. Try a longer password with a mix of letters, numbers, and symbols.";
   }
 
   if (lower.includes("signup")) {
@@ -40,6 +54,81 @@ function getCallbackErrorMessage(errorCode: string | null) {
     default:
       return null;
   }
+}
+
+function getPasswordChecks(password: string) {
+  return {
+    minLength: password.length >= 8,
+    hasLetter: /[a-zA-Z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSymbol: /[^a-zA-Z0-9]/.test(password),
+  };
+}
+
+function getPasswordStrength(password: string) {
+  if (!password) {
+    return {
+      label: "Enter a password",
+      score: 0,
+      barClass: "bg-slate-200",
+      textClass: "text-[var(--color-muted)]",
+    };
+  }
+
+  const checks = getPasswordChecks(password);
+  const score = Object.values(checks).filter(Boolean).length;
+
+  if (score <= 1) {
+    return {
+      label: "Weak",
+      score,
+      barClass: "bg-rose-500",
+      textClass: "text-rose-700",
+    };
+  }
+
+  if (score <= 3) {
+    return {
+      label: "Good",
+      score,
+      barClass: "bg-amber-500",
+      textClass: "text-amber-700",
+    };
+  }
+
+  return {
+    label: "Strong",
+    score,
+    barClass: "bg-emerald-500",
+    textClass: "text-emerald-700",
+  };
+}
+
+function PasswordRequirement({
+  met,
+  label,
+}: {
+  met: boolean;
+  label: string;
+}) {
+  return (
+    <li
+      className={`flex items-center gap-2 ${
+        met ? "text-emerald-700" : "text-[var(--color-muted)]"
+      }`}
+    >
+      <span
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
+          met
+            ? "bg-emerald-100 text-emerald-700"
+            : "bg-slate-100 text-slate-500"
+        }`}
+      >
+        {met ? "✓" : "•"}
+      </span>
+      <span>{label}</span>
+    </li>
+  );
 }
 
 export default function LoginPage() {
@@ -68,6 +157,13 @@ export default function LoginPage() {
       setError(callbackError);
     }
   }, [searchParams]);
+
+  const isLogin = mode === "login";
+  const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
+  const passwordStrength = useMemo(
+    () => getPasswordStrength(password),
+    [password]
+  );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -122,7 +218,18 @@ export default function LoginPage() {
       }
 
       if (password.length < 8) {
-        setError("Use at least 8 characters for your password.");
+        setError("Your password must be at least 8 characters long.");
+        return;
+      }
+
+      if (
+        !passwordChecks.hasLetter ||
+        !passwordChecks.hasNumber ||
+        !passwordChecks.hasSymbol
+      ) {
+        setError(
+          "Use at least 8 characters with a mix of letters, numbers, and symbols."
+        );
         return;
       }
 
@@ -135,6 +242,7 @@ export default function LoginPage() {
       });
 
       if (error) {
+        console.error("Signup error:", error.message);
         setError(getFriendlyAuthError(error.message));
         return;
       }
@@ -151,9 +259,11 @@ export default function LoginPage() {
           "Account created. Check your email to confirm your address before signing in."
         );
         setMode("login");
+        router.replace("/login");
       } else {
         setMessage("Account created. You can now sign in.");
         setMode("login");
+        router.replace("/login");
       }
 
       setEmail(normalizedEmail);
@@ -165,8 +275,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
-
-  const isLogin = mode === "login";
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-md items-center px-4 py-8 sm:px-6">
@@ -250,9 +358,46 @@ export default function LoginPage() {
         </label>
 
         {!isLogin ? (
-          <p className="mb-4 text-xs leading-5 text-[var(--color-muted)]">
-            Use at least 8 characters for your password.
-          </p>
+          <div className="mb-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium text-[var(--color-text)]">
+                Password strength
+              </p>
+              <p className={`text-xs font-semibold ${passwordStrength.textClass}`}>
+                {passwordStrength.label}
+              </p>
+            </div>
+
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${passwordStrength.barClass}`}
+                style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
+              />
+            </div>
+
+            <p className="mt-3 text-xs leading-5 text-[var(--color-muted)]">
+              Use at least 8 characters, including a mix of letters, numbers, and symbols.
+            </p>
+
+            <ul className="mt-3 space-y-2 text-xs">
+              <PasswordRequirement
+                met={passwordChecks.minLength}
+                label="At least 8 characters"
+              />
+              <PasswordRequirement
+                met={passwordChecks.hasLetter}
+                label="Contains a letter"
+              />
+              <PasswordRequirement
+                met={passwordChecks.hasNumber}
+                label="Contains a number"
+              />
+              <PasswordRequirement
+                met={passwordChecks.hasSymbol}
+                label="Contains a symbol"
+              />
+            </ul>
+          </div>
         ) : null}
 
         {error ? (
