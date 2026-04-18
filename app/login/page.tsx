@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function getFriendlyAuthError(message: string) {
   const lower = message.toLowerCase();
@@ -16,7 +16,7 @@ function getFriendlyAuthError(message: string) {
     return "Please confirm your email address before signing in.";
   }
 
-  if (lower.includes("already")) {
+  if (lower.includes("user already registered") || lower.includes("already")) {
     return "An account with this email already exists.";
   }
 
@@ -24,7 +24,22 @@ function getFriendlyAuthError(message: string) {
     return "Please check your password and try again.";
   }
 
+  if (lower.includes("signup")) {
+    return "We couldn’t create your account. Please try again.";
+  }
+
   return "Something went wrong. Please try again.";
+}
+
+function getCallbackErrorMessage(errorCode: string | null) {
+  switch (errorCode) {
+    case "missing_auth_code":
+      return "This sign-in link is incomplete or has expired.";
+    case "auth_callback_failed":
+      return "We couldn’t verify your sign-in link. Please try again.";
+    default:
+      return null;
+  }
 }
 
 export default function LoginPage() {
@@ -36,6 +51,23 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const requestedMode = searchParams.get("mode");
+    if (requestedMode === "signup") {
+      setMode("signup");
+    } else {
+      setMode("login");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const callbackError = getCallbackErrorMessage(searchParams.get("error"));
+    if (callbackError) {
+      setError(callbackError);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -56,7 +88,6 @@ export default function LoginPage() {
 
         if (error) {
           setError(getFriendlyAuthError(error.message));
-          setIsLoading(false);
           return;
         }
 
@@ -66,7 +97,6 @@ export default function LoginPage() {
 
         if (!user) {
           setError("Login failed. Please try again.");
-          setIsLoading(false);
           return;
         }
 
@@ -78,7 +108,6 @@ export default function LoginPage() {
 
         if (profileError) {
           setError("Could not load your account.");
-          setIsLoading(false);
           return;
         }
 
@@ -89,56 +118,52 @@ export default function LoginPage() {
         }
 
         router.refresh();
-      } else {
-        if (password.length < 8) {
-          setError("Use at least 8 characters for your password.");
-          setIsLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-        });
-
-        if (error) {
-          setError(getFriendlyAuthError(error.message));
-          setIsLoading(false);
-          return;
-        }
-
-        if (!data.user) {
-          setError("Account could not be created.");
-          setIsLoading(false);
-          return;
-        }
-
-        const { error: profileInsertError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: data.user.id,
-            name: null,
-            role: "user",
-            email_reminders: true,
-            missed_reminder_alerts: true,
-          });
-
-        if (profileInsertError) {
-          setError("Account created, but profile setup failed.");
-          setIsLoading(false);
-          return;
-        }
-
-        setMessage("Account created. Sign in to continue.");
-        setMode("login");
-        setEmail(normalizedEmail);
-        setPassword("");
+        return;
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
-    }
 
-    setIsLoading(false);
+      if (password.length < 8) {
+        setError("Use at least 8 characters for your password.");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
+
+      if (error) {
+        setError(getFriendlyAuthError(error.message));
+        return;
+      }
+
+      if (!data.user) {
+        setError("Account could not be created.");
+        return;
+      }
+
+      const emailConfirmed = Boolean(data.user.email_confirmed_at);
+
+      if (!emailConfirmed) {
+        setMessage(
+          "Account created. Check your email to confirm your address before signing in."
+        );
+        setMode("login");
+      } else {
+        setMessage("Account created. You can now sign in.");
+        setMode("login");
+      }
+
+      setEmail(normalizedEmail);
+      setPassword("");
+    } catch (err) {
+      console.error("Auth form error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const isLogin = mode === "login";
@@ -167,6 +192,7 @@ export default function LoginPage() {
               setMode("login");
               setError(null);
               setMessage(null);
+              router.replace("/login");
             }}
             className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               isLogin
@@ -183,6 +209,7 @@ export default function LoginPage() {
               setMode("signup");
               setError(null);
               setMessage(null);
+              router.replace("/login?mode=signup");
             }}
             className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               !isLogin
@@ -202,6 +229,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
+            autoComplete="email"
             className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             required
           />
@@ -215,6 +243,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
+            autoComplete={isLogin ? "current-password" : "new-password"}
             className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             required
           />
@@ -239,6 +268,7 @@ export default function LoginPage() {
         ) : null}
 
         <button
+          type="submit"
           disabled={isLoading}
           className={`w-full rounded-xl px-4 py-3 text-sm font-medium text-white shadow-sm transition ${
             isLoading
@@ -251,8 +281,8 @@ export default function LoginPage() {
               ? "Logging in..."
               : "Creating account..."
             : isLogin
-            ? "Sign in"
-            : "Create account"}
+              ? "Sign in"
+              : "Create account"}
         </button>
 
         <div className="mt-4 flex flex-col items-center gap-3">
@@ -266,10 +296,10 @@ export default function LoginPage() {
           ) : null}
 
           <Link
-            href="/dashboard"
+            href="/"
             className="text-sm text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
           >
-            Back to dashboard
+            Back to home
           </Link>
         </div>
       </form>

@@ -1,12 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+function getFriendlyResetError(message?: string) {
+  const lower = (message || "").toLowerCase();
+
+  if (lower.includes("session")) {
+    return "Your reset session is invalid or has expired. Please request a new reset link.";
+  }
+
+  if (lower.includes("password")) {
+    return "We could not update your password. Please check your password and try again.";
+  }
+
+  if (lower.includes("expired")) {
+    return "Your reset link has expired. Please request a new one.";
+  }
+
+  return "We could not update your password right now. Please try again.";
+}
+
 export default function ResetPasswordPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const [password, setPassword] = useState("");
@@ -18,6 +36,8 @@ export default function ResetPasswordPage() {
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     async function checkSession() {
       setErrorMessage(null);
 
@@ -26,8 +46,12 @@ export default function ResetPasswordPage() {
         error,
       } = await supabase.auth.getSession();
 
+      if (!mounted) return;
+
       if (error) {
-        setErrorMessage("We could not verify your reset session. Please request a new reset link.");
+        setErrorMessage(
+          "We could not verify your reset session. Please request a new reset link."
+        );
         setLoadingSession(false);
         return;
       }
@@ -43,6 +67,29 @@ export default function ResetPasswordPage() {
     }
 
     checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      if (
+        event === "PASSWORD_RECOVERY" ||
+        event === "SIGNED_IN" ||
+        event === "TOKEN_REFRESHED"
+      ) {
+        if (session) {
+          setSessionReady(true);
+          setLoadingSession(false);
+          setErrorMessage(null);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -78,7 +125,7 @@ export default function ResetPasswordPage() {
 
     if (error) {
       setSaving(false);
-      setErrorMessage(error.message);
+      setErrorMessage(getFriendlyResetError(error.message));
       return;
     }
 
@@ -86,20 +133,17 @@ export default function ResetPasswordPage() {
       try {
         const response = await fetch("/api/email/password-changed", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: user.email,
-          }),
         });
 
         if (!response.ok) {
           const data = await response.json().catch(() => null);
-          console.error("Password changed email failed:", data ?? response.statusText);
+          console.error(
+            "Password changed email failed:",
+            data ?? response.statusText
+          );
         }
       } catch (emailError) {
-        console.error("Password reset email trigger error:", emailError);
+        console.error("Password changed email trigger error:", emailError);
       }
     }
 
@@ -122,7 +166,7 @@ export default function ResetPasswordPage() {
             Reset password
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-            Enter a new password for your account.
+            Enter a new password for your PEPT|IQ account.
           </p>
         </div>
 
@@ -135,6 +179,7 @@ export default function ResetPasswordPage() {
               type="password"
               required
               minLength={8}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loadingSession || !sessionReady || saving}
@@ -150,6 +195,7 @@ export default function ResetPasswordPage() {
               type="password"
               required
               minLength={8}
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loadingSession || !sessionReady || saving}

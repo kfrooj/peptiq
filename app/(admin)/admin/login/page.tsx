@@ -16,10 +16,6 @@ function getFriendlyAuthError(message: string) {
     return "Please confirm your email address before signing in.";
   }
 
-  if (lower.includes("already")) {
-    return "An account with this email already exists.";
-  }
-
   if (lower.includes("password")) {
     return "Please check your password and try again.";
   }
@@ -27,8 +23,7 @@ function getFriendlyAuthError(message: string) {
   return "Something went wrong. Please try again.";
 }
 
-export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,100 +43,52 @@ export default function LoginPage() {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
 
-        if (error) {
-          setError(getFriendlyAuthError(error.message));
-          setIsLoading(false);
-          return;
-        }
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          setError("Login failed. Please try again.");
-          setIsLoading(false);
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-
-        if (profileError) {
-          setError("Could not load your account.");
-          setIsLoading(false);
-          return;
-        }
-
-        if (profile?.role === "admin") {
-          router.push("/admin/peptides");
-        } else {
-          router.push("/dashboard");
-        }
-
-        router.refresh();
-      } else {
-        if (password.length < 8) {
-          setError("Use at least 8 characters for your password.");
-          setIsLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-        });
-
-        if (error) {
-          setError(getFriendlyAuthError(error.message));
-          setIsLoading(false);
-          return;
-        }
-
-        if (!data.user) {
-          setError("Account could not be created.");
-          setIsLoading(false);
-          return;
-        }
-
-        const { error: profileInsertError } = await supabase
-          .from("profiles")
-          .upsert({
-            id: data.user.id,
-            name: null,
-            role: "user",
-            email_reminders: true,
-            missed_reminder_alerts: true,
-          });
-
-        if (profileInsertError) {
-          setError("Account created, but profile setup failed.");
-          setIsLoading(false);
-          return;
-        }
-
-        setMessage("Account created. Sign in to continue.");
-        setMode("login");
-        setEmail(normalizedEmail);
-        setPassword("");
+      if (error) {
+        setError(getFriendlyAuthError(error.message));
+        return;
       }
-    } catch {
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("Login failed. Please try again.");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        setError("Could not load your account.");
+        return;
+      }
+
+      if (profile?.role !== "admin") {
+        setError("You do not have admin access.");
+        await supabase.auth.signOut();
+        return;
+      }
+
+      setMessage("Admin access confirmed. Redirecting...");
+      router.push("/admin/peptides");
+      router.refresh();
+    } catch (err) {
+      console.error("Admin login error:", err);
       setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }
-
-  const isLogin = mode === "login";
 
   return (
     <main className="mx-auto flex min-h-[calc(100vh-120px)] max-w-md items-center px-4 py-8 sm:px-6">
@@ -151,47 +98,11 @@ export default function LoginPage() {
       >
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[var(--color-text)]">
-            {isLogin ? "Welcome back" : "Create your account"}
+            Admin login
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-            {isLogin
-              ? "Sign in to access your plans, reminders, and tracking."
-              : "Create an account to start tracking plans, reminders, and adherence in PEPTIQ."}
+            Sign in with an admin account to access the PEPT|IQ admin area.
           </p>
-        </div>
-
-        <div className="mb-6 flex rounded-2xl bg-[var(--color-surface-muted)] p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("login");
-              setError(null);
-              setMessage(null);
-            }}
-            className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              isLogin
-                ? "bg-[var(--color-accent)] text-white"
-                : "text-[var(--color-text)]"
-            }`}
-          >
-            Login
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signup");
-              setError(null);
-              setMessage(null);
-            }}
-            className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              !isLogin
-                ? "bg-[var(--color-accent)] text-white"
-                : "text-[var(--color-text)]"
-            }`}
-          >
-            Sign up
-          </button>
         </div>
 
         <label className="mb-4 block">
@@ -202,12 +113,13 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
+            autoComplete="email"
             className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             required
           />
         </label>
 
-        <label className="mb-4 block">
+        <label className="mb-6 block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
             Password
           </span>
@@ -215,16 +127,11 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
+            autoComplete="current-password"
             className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             required
           />
         </label>
-
-        {!isLogin ? (
-          <p className="mb-4 text-xs leading-5 text-[var(--color-muted)]">
-            Use at least 8 characters for your password.
-          </p>
-        ) : null}
 
         {error ? (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
@@ -239,6 +146,7 @@ export default function LoginPage() {
         ) : null}
 
         <button
+          type="submit"
           disabled={isLoading}
           className={`w-full rounded-xl px-4 py-3 text-sm font-medium text-white shadow-sm transition ${
             isLoading
@@ -246,30 +154,22 @@ export default function LoginPage() {
               : "bg-[var(--color-accent)] hover:opacity-90"
           }`}
         >
-          {isLoading
-            ? isLogin
-              ? "Logging in..."
-              : "Creating account..."
-            : isLogin
-            ? "Sign in"
-            : "Create account"}
+          {isLoading ? "Signing in..." : "Sign in"}
         </button>
 
         <div className="mt-4 flex flex-col items-center gap-3">
-          {isLogin ? (
-            <Link
-              href="/forgot-password"
-              className="text-sm text-[var(--color-accent)] transition hover:opacity-80"
-            >
-              Forgot password?
-            </Link>
-          ) : null}
+          <Link
+            href="/forgot-password"
+            className="text-sm text-[var(--color-accent)] transition hover:opacity-80"
+          >
+            Forgot password?
+          </Link>
 
           <Link
-            href="/dashboard"
+            href="/login"
             className="text-sm text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
           >
-            Back to dashboard
+            Back to main login
           </Link>
         </div>
       </form>

@@ -14,6 +14,14 @@ function getFriendlyErrorMessage(error?: string) {
     return "Please enter your email address.";
   }
 
+  if (error === "invalid-email") {
+    return "Please enter a valid email address.";
+  }
+
+  if (error === "send-failed") {
+    return "We could not send a reset link right now. Please try again.";
+  }
+
   return "We could not send a reset link right now. Please try again.";
 }
 
@@ -39,7 +47,7 @@ export default async function ForgotPasswordPage({
             Forgot password
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-            Enter your email address and we’ll send you a password reset link.
+            Enter your email address and we’ll send you a PEPT|IQ password reset link.
           </p>
         </div>
 
@@ -64,6 +72,7 @@ export default async function ForgotPasswordPage({
               type="email"
               name="email"
               required
+              autoComplete="email"
               placeholder="you@example.com"
               className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]"
             />

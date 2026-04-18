@@ -130,7 +130,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
             <div className="relative h-8 w-[110px] sm:h-9 sm:w-[135px] lg:h-10 lg:w-[150px]">
               <Image
                 src="/peptiq-logo-dark.png"
-                alt="PEPTIQ"
+                alt="PEPT|IQ"
                 fill
                 priority
                 className="object-contain object-left"
@@ -295,7 +295,7 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                 </Link>
 
                 <Link
-                  href="/signup"
+                  href="/login?mode=signup"
                   className="rounded-full bg-[#2F5E8E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#3E73A8]"
                 >
                   Sign up
@@ -423,9 +423,9 @@ export default function SiteHeader({ user, isAdmin }: Props) {
                   </Link>
 
                   <Link
-                    href="/signup"
+                    href="/login?mode=signup"
                     className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActivePath(pathname, "/signup")
+                      pathname === "/login"
                         ? "bg-[#2F5E8E] text-white"
                         : "text-slate-700 hover:bg-slate-50 hover:text-[#2F5E8E]"
                     }`}

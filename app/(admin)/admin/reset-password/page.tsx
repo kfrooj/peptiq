@@ -57,7 +57,7 @@ export default async function AdminResetPasswordPage({
         </div>
 
         <Link
-          href="/admin/peptides"
+          href="/admin/"
           className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
         >
           Back to Admin Hub
