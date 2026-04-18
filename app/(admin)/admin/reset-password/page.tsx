@@ -52,12 +52,12 @@ export default async function AdminResetPasswordPage({
             Password Reset Tool
           </h1>
           <p className="mt-2 text-sm text-[var(--color-muted)]">
-            Reset a user password directly for testing and support.
+            Send a secure PEPT|IQ password reset email to a user.
           </p>
         </div>
 
         <Link
-          href="/admin/"
+          href="/admin/peptides"
           className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
         >
           Back to Admin Hub
@@ -66,10 +66,10 @@ export default async function AdminResetPasswordPage({
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
-          Reset User Password
+          Send Reset Email
         </h2>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          Enter the user’s email address and a new password.
+          Enter the user’s email address and we’ll send them a password reset link.
         </p>
 
         <form
@@ -85,22 +85,9 @@ export default async function AdminResetPasswordPage({
               type="email"
               name="email"
               required
+              autoComplete="email"
               className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-blue-500"
               placeholder="user@example.com"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-[var(--color-text)]">
-              New password
-            </span>
-            <input
-              type="password"
-              name="password"
-              required
-              minLength={8}
-              className="mt-2 w-full rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-blue-500"
-              placeholder="Minimum 8 characters"
             />
           </label>
 
@@ -120,7 +107,7 @@ export default async function AdminResetPasswordPage({
             type="submit"
             className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
           >
-            Reset Password
+            Send Reset Email
           </button>
         </form>
       </section>
