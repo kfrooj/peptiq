@@ -215,28 +215,28 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
             {visiblePeptides.map((peptide) => (
               <div key={peptide.id} className="px-3 py-2.5 sm:px-4 sm:py-3">
                 {/* Mobile: tight single-row layout */}
-                <div className="flex items-center justify-between gap-2 md:hidden">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                      {peptide.name}
-                    </p>
+              <div className="flex items-center justify-between gap-2 md:hidden">
+  <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+      {peptide.name}
+    </p>
 
-                    <span
-                      className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${getCategoryStyle(
-                        peptide.category
-                      )}`}
-                    >
-                      {peptide.category}
-                    </span>
-                  </div>
+    <span
+      className={`inline-flex max-w-[80px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getCategoryStyle(
+        peptide.category
+      )}`}
+    >
+      {peptide.category}
+    </span>
+  </div>
 
-                  <Link
-                    href={`/peptides/${peptide.slug}`}
-                    className="inline-flex shrink-0 items-center rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
-                  >
-                    View
-                  </Link>
-                </div>
+  <Link
+    href={`/peptides/${peptide.slug}`}
+    className="inline-flex h-7 shrink-0 items-center rounded-md border border-[var(--color-border)] bg-white px-2 text-[11px] font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+  >
+    View
+  </Link>
+</div>
 
                 {/* Desktop/tablet: keep structured layout */}
                 <div className="hidden gap-3 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center">
