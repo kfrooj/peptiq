@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useState, useTransition } from "react";
-import { createInjectionPlan } from "@/app/(protected)/plans/actions";
+import Image from "next/image";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { createInjectionLog } from "@/app/(protected)/log-injection/actions";
 
 type Peptide = {
   id: string;
@@ -10,429 +10,346 @@ type Peptide = {
   category: string | null;
 };
 
-type Props = {
-  peptides: Peptide[];
-  disabled?: boolean;
-  disabledReason?: string;
-  upgradeHref?: string;
+type Plan = {
+  id: string;
+  plan_name: string;
+  peptide_id: string;
+  active: boolean;
 };
 
-const fieldClassName =
-  "w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-[var(--color-muted)]";
+type Props = {
+  peptides: Peptide[];
+  plans: Plan[];
+  initialPlanId?: string;
+  initialInjectionAt?: string;
+};
 
-export default function NewInjectionPlanForm({
+type InjectionSite =
+  | "Left upper arm"
+  | "Right upper arm"
+  | "Left abdomen"
+  | "Right abdomen"
+  | "Left thigh"
+  | "Right thigh"
+  | "Left glute"
+  | "Right glute";
+
+type Hotspot = {
+  id: InjectionSite;
+  label: string;
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+};
+
+const HOTSPOTS: Hotspot[] = [
+  {
+    id: "Left upper arm",
+    label: "Left arm",
+    left: "11.8%",
+    top: "27%",
+    width: "5.2%",
+    height: "9.0%",
+  },
+  {
+    id: "Right upper arm",
+    label: "Right arm",
+    left: "39.2%",
+    top: "27%",
+    width: "5.2%",
+    height: "9.0%",
+  },
+  {
+    id: "Left abdomen",
+    label: "Left abdomen",
+    left: "20.1%",
+    top: "35.0%",
+    width: "6.9%",
+    height: "6.1%",
+  },
+  {
+    id: "Right abdomen",
+    label: "Right abdomen",
+    left: "30.4%",
+    top: "35%",
+    width: "6.9%",
+    height: "6.1%",
+  },
+  {
+    id: "Left thigh",
+    label: "Left thigh",
+    left: "17%",
+    top: "45%",
+    width: "7.1%",
+    height: "12.0%",
+  },
+  {
+    id: "Right thigh",
+    label: "Right thigh",
+    left: "33%",
+    top: "45%",
+    width: "7.1%",
+    height: "12.0%",
+  },
+  {
+    id: "Left upper arm",
+    label: "Left arm",
+    left: "55.7%",
+    top: "27%",
+    width: "5.2%",
+    height: "9.0%",
+  },
+  {
+    id: "Right upper arm",
+    label: "Right arm",
+    left: "84%",
+    top: "27%",
+    width: "5.2%",
+    height: "9.0%",
+  },
+  {
+    id: "Left glute",
+    label: "Left glute",
+    left: "62%",
+    top: "42%",
+    width: "7.3%",
+    height: "6.6%",
+  },
+  {
+    id: "Right glute",
+    label: "Right glute",
+    left: "76%",
+    top: "42%",
+    width: "7.3%",
+    height: "6.6%",
+  },
+  {
+    id: "Left thigh",
+    label: "Left thigh",
+    left: "60%",
+    top: "48%",
+    width: "6.9%",
+    height: "11.6%",
+  },
+  {
+    id: "Right thigh",
+    label: "Right thigh",
+    left: "78%",
+    top: "48%",
+    width: "6.9%",
+    height: "11.6%",
+  },
+];
+
+const fieldClassName =
+  "w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]";
+
+export default function NewInjectionLogForm({
   peptides,
-  disabled = false,
-  disabledReason,
-  upgradeHref = "/pricing",
+  plans,
+  initialPlanId = "",
+  initialInjectionAt = "",
 }: Props) {
-  const [peptideId, setPeptideId] = useState("");
-  const [planName, setPlanName] = useState("");
-  const [doseAmount, setDoseAmount] = useState("");
-  const [doseUnit, setDoseUnit] = useState("mcg");
-  const [frequencyType, setFrequencyType] = useState("daily");
-  const [frequencyValue, setFrequencyValue] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [defaultTime, setDefaultTime] = useState("09:00");
-  const [active, setActive] = useState(true);
-  const [remindersEnabled, setRemindersEnabled] = useState(true);
-  const [reminderOffsetHours, setReminderOffsetHours] = useState("24");
-  const [notes, setNotes] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [peptideId, setPeptideId] = useState<string>("");
+  const [planId, setPlanId] = useState<string>(initialPlanId ?? "");
+  const [injectionAt, setInjectionAt] = useState<string>(initialInjectionAt ?? "");
+  const [doseAmount, setDoseAmount] = useState<string>("");
+  const [doseUnit, setDoseUnit] = useState<string>("mcg");
+  const [site, setSite] = useState<InjectionSite | "">("");
+  const [notes, setNotes] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+  const [error, setError] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
-  const isFormLocked = disabled;
-  const isSubmitDisabled = isPending || isFormLocked;
+  useEffect(() => {
+    setPlanId(initialPlanId ?? "");
+  }, [initialPlanId]);
 
-  function resetForm() {
-    setPeptideId("");
-    setPlanName("");
-    setDoseAmount("");
-    setDoseUnit("mcg");
-    setFrequencyType("daily");
-    setFrequencyValue("");
-    setStartDate("");
-    setEndDate("");
-    setDefaultTime("09:00");
-    setActive(true);
-    setRemindersEnabled(true);
-    setReminderOffsetHours("24");
-    setNotes("");
-  }
+  useEffect(() => {
+    setInjectionAt(initialInjectionAt ?? "");
+  }, [initialInjectionAt]);
+
+  const selectedPlan = useMemo<Plan | null>(() => {
+    return plans.find((p) => p.id === planId) ?? null;
+  }, [plans, planId]);
+
+  useEffect(() => {
+    if (selectedPlan) {
+      setPeptideId(selectedPlan.peptide_id ?? "");
+    }
+  }, [selectedPlan]);
 
   function handleSubmit() {
-    if (isFormLocked) {
-      setMessage("");
-      setError(
-        disabledReason ||
-          "Upgrade required to create another active plan."
-      );
-      return;
-    }
-
-    setMessage("");
     setError("");
+    setMessage("");
 
     if (!peptideId) {
-      setError("Please select a peptide.");
+      setError("Select peptide");
       return;
     }
 
-    if (!planName.trim()) {
-      setError("Please enter a plan name.");
+    if (!injectionAt) {
+      setError("Pick time");
       return;
     }
 
-
-
-    
     if (!doseAmount || Number(doseAmount) <= 0) {
-      setError("Please enter a valid dose amount.");
+      setError("Enter dose");
       return;
     }
 
-    if (!startDate) {
-      setError("Please choose a start date.");
-      return;
-    }
-
-    if (!defaultTime) {
-      setError("Please choose an injection time.");
-      return;
-    }
-
-    if (
-      frequencyType === "every_x_days" &&
-      (!frequencyValue || Number(frequencyValue) < 1)
-    ) {
-      setError("Please enter how many days between injections.");
-      return;
-    }
-
-    if (
-      remindersEnabled &&
-      (!reminderOffsetHours || Number(reminderOffsetHours) < 1)
-    ) {
-      setError("Please enter a valid reminder offset.");
+    if (!site) {
+      setError("Select site");
       return;
     }
 
     startTransition(async () => {
-      const result = await createInjectionPlan({
+      const res = await createInjectionLog({
         peptideId,
-        planName: planName.trim(),
+        planId: planId || null,
+        injectionAt,
         doseAmount: Number(doseAmount),
         doseUnit,
-        frequencyType,
-        frequencyValue:
-          frequencyType === "every_x_days" && frequencyValue
-            ? Number(frequencyValue)
-            : null,
-        startDate,
-        endDate: endDate || null,
-        defaultTime,
-        active,
-        remindersEnabled,
-        reminderOffsetHours: Number(reminderOffsetHours),
+        site,
         notes: notes.trim() || null,
       });
 
-      if (result.success) {
-        setMessage("Plan created successfully.");
-        setError("");
-        resetForm();
+      if (res.success) {
+        setMessage("Logged ✓");
+        setDoseAmount("");
+        setNotes("");
       } else {
-        setError(result.error || "Could not create plan.");
-        setMessage("");
+        setError(res.error || "Could not log injection.");
       }
     });
   }
 
   return (
-    <div className="grid gap-4">
-      {isFormLocked ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-semibold text-amber-900">
-                Upgrade to create more plans
-              </p>
-              <p className="mt-1 text-sm text-amber-800">
-                {disabledReason ||
-                  "Free includes up to 2 active plans. Upgrade to Pro for unlimited plans, or archive an existing one first."}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Link
-                href={upgradeHref}
-                className="inline-flex min-h-10 items-center justify-center rounded-full bg-[var(--color-text)] px-4 py-2 text-sm font-semibold text-white"
-              >
-                Upgrade to Pro
-              </Link>
-
-              <a
-                href="#your-plans"
-                className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-text)]"
-              >
-                Review plans
-              </a>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <fieldset
-        disabled={isFormLocked}
-        className={`grid gap-4 ${isFormLocked ? "opacity-60" : ""}`}
-      >
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-            Peptide
-          </label>
-          <select
-            value={peptideId}
-            onChange={(e) => setPeptideId(e.target.value)}
-            className={fieldClassName}
-          >
-            <option value="">Select a peptide</option>
-            {peptides.map((peptide) => (
-              <option key={peptide.id} value={peptide.id}>
-                {peptide.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-            Plan name
-          </label>
-          <input
-            type="text"
-            value={planName}
-            onChange={(e) => setPlanName(e.target.value)}
-            placeholder="Morning Recovery Plan"
-            className={fieldClassName}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-              Dose amount
-            </label>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={doseAmount}
-              onChange={(e) => setDoseAmount(e.target.value)}
-              placeholder="250"
-              className={fieldClassName}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-              Dose unit
-            </label>
-            <select
-              value={doseUnit}
-              onChange={(e) => setDoseUnit(e.target.value)}
-              className={fieldClassName}
-            >
-              <option value="mcg">mcg</option>
-              <option value="mg">mg</option>
-              <option value="IU">IU</option>
-              <option value="mL">mL</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-              Frequency
-            </label>
-            <select
-              value={frequencyType}
-              onChange={(e) => setFrequencyType(e.target.value)}
-              className={fieldClassName}
-            >
-              <option value="daily">Daily</option>
-              <option value="every_x_days">Every X days</option>
-            </select>
-          </div>
-
-          {frequencyType === "every_x_days" ? (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                Repeat every
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={frequencyValue}
-                onChange={(e) => setFrequencyValue(e.target.value)}
-                placeholder="3"
-                className={fieldClassName}
-              />
-              <p className="mt-1.5 text-xs text-[var(--color-muted)]">
-                Enter the number of days between injections.
-              </p>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-              Start date
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className={fieldClassName}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-              End date
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className={fieldClassName}
-            />
-            <p className="mt-1.5 text-xs text-[var(--color-muted)]">
-              Optional. Leave blank for an ongoing plan.
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-            Injection time
-          </label>
-          <input
-            type="time"
-            value={defaultTime}
-            onChange={(e) => setDefaultTime(e.target.value)}
-            className={fieldClassName}
-          />
-          <p className="mt-1.5 text-xs text-[var(--color-muted)]">
-            Used to calculate reminder timing.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
-          <h3 className="text-sm font-semibold text-[var(--color-text)]">
-            Plan settings
-          </h3>
-
-          <div className="mt-3 grid gap-3">
-            <label className="flex items-start justify-between gap-4 rounded-xl border border-[var(--color-border)] bg-white p-3">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">
-                  Plan is active
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  Active plans are included in reminders and adherence tracking.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-              />
-            </label>
-
-            <label className="flex items-start justify-between gap-4 rounded-xl border border-[var(--color-border)] bg-white p-3">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">
-                  Enable reminders
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  Send reminder emails before the scheduled injection time.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={remindersEnabled}
-                onChange={(e) => setRemindersEnabled(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
-              />
-            </label>
-
-            {remindersEnabled ? (
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-                  Reminder timing
-                </label>
-                <select
-                  value={reminderOffsetHours}
-                  onChange={(e) => setReminderOffsetHours(e.target.value)}
-                  className={fieldClassName}
-                >
-                  <option value="1">1 hour before</option>
-                  <option value="6">6 hours before</option>
-                  <option value="12">12 hours before</option>
-                  <option value="24">24 hours before</option>
-                  <option value="48">48 hours before</option>
-                </select>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-            Notes
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Rotate left/right abdomen and log any reactions"
-            className={fieldClassName}
-          />
-        </div>
-      </fieldset>
-
-      {!isFormLocked ? (
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitDisabled}
-          className={`min-h-11 rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${
-            isSubmitDisabled
-              ? "cursor-not-allowed bg-slate-400"
-              : "bg-[var(--color-accent)] hover:opacity-90"
-          }`}
+    <div className="grid gap-3">
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          value={planId}
+          onChange={(e) => setPlanId(e.target.value)}
+          className={fieldClassName}
         >
-          {isPending ? "Saving..." : "Create plan"}
-        </button>
-      ) : null}
+          <option value="">No plan</option>
+          {plans.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.plan_name}
+            </option>
+          ))}
+        </select>
 
-      {message ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {message}
-        </div>
-      ) : null}
+        <select
+          value={peptideId}
+          onChange={(e) => setPeptideId(e.target.value)}
+          className={fieldClassName}
+          disabled={Boolean(selectedPlan)}
+        >
+          <option value="">Peptide</option>
+          {peptides.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-          {error}
+      <input
+        type="datetime-local"
+        value={injectionAt}
+        onChange={(e) => setInjectionAt(e.target.value)}
+        className={fieldClassName}
+      />
+
+      <div className="grid grid-cols-[1fr_80px] gap-2">
+        <input
+          type="number"
+          value={doseAmount}
+          onChange={(e) => setDoseAmount(e.target.value)}
+          placeholder="Dose"
+          className={fieldClassName}
+        />
+
+        <select
+          value={doseUnit}
+          onChange={(e) => setDoseUnit(e.target.value)}
+          className={fieldClassName}
+        >
+          <option value="mcg">mcg</option>
+          <option value="mg">mg</option>
+          <option value="IU">iu</option>
+          <option value="mL">ml</option>
+        </select>
+      </div>
+
+      <div className="rounded-2xl border p-3">
+        <p className="mb-2 text-xs text-[var(--color-muted)]">
+          Tap injection site
+        </p>
+
+        <div className="relative mx-auto max-w-xs overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
+          <div className="relative aspect-[1024/1536] w-full">
+            <Image
+              src="/injection-sites-body-map-v2.png"
+              alt="Injection body map"
+              fill
+              className="object-contain"
+              priority
+            />
+
+            {HOTSPOTS.map((spot, i) => {
+              const active = site === spot.id;
+
+              return (
+                <button
+                  key={`${spot.id}-${spot.left}-${spot.top}-${i}`}
+                  type="button"
+                  onClick={() => setSite(spot.id)}
+                  className={`absolute rounded-[40%] border-2 transition ${
+                    active
+                      ? "border-red-600 bg-red-500/22 ring-2 ring-red-300"
+                      : "border-red-500/80 bg-red-400/10 hover:bg-red-400/18"
+                  }`}
+                  style={{
+                    left: spot.left,
+                    top: spot.top,
+                    width: spot.width,
+                    height: spot.height,
+                  }}
+                  aria-label={spot.label}
+                  title={spot.label}
+                />
+              );
+            })}
+          </div>
         </div>
-      ) : null}
+
+        <p className="mt-2 text-center text-xs text-[var(--color-muted)]">
+          {site || "No site selected"}
+        </p>
+      </div>
+
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        rows={2}
+        placeholder="Notes (optional)"
+        className={fieldClassName}
+      />
+
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={isPending}
+        className="rounded-xl bg-[var(--color-accent)] py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isPending ? "Saving..." : "Log injection"}
+      </button>
+
+      {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
+      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
     </div>
   );
 }

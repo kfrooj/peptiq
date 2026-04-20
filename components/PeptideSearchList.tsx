@@ -96,11 +96,11 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
   const hasPreviousPage = currentPage > 1;
 
   return (
-    <section className="rounded-3xl border border-[var(--color-border)] bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex flex-col gap-5">
+    <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-[var(--color-text)]">
+            <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
               Browse peptides
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
@@ -112,7 +112,7 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/peptides/glossary"
-              className="inline-flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:bg-white"
+              className="inline-flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:bg-white"
             >
               Peptides Glossary
             </Link>
@@ -194,7 +194,7 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
         </div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--color-border)]">
         <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] gap-3 bg-[var(--color-surface-muted)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)] md:grid">
           <div>Peptide</div>
           <div>Category</div>
@@ -213,11 +213,33 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
         ) : (
           <div className="divide-y divide-[var(--color-border)]">
             {visiblePeptides.map((peptide) => (
-              <div
-                key={peptide.id}
-                className="px-4 py-3"
-              >
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center">
+              <div key={peptide.id} className="px-3 py-2.5 sm:px-4 sm:py-3">
+                {/* Mobile: tight single-row layout */}
+                <div className="flex items-center justify-between gap-2 md:hidden">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                      {peptide.name}
+                    </p>
+
+                    <span
+                      className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${getCategoryStyle(
+                        peptide.category
+                      )}`}
+                    >
+                      {peptide.category}
+                    </span>
+                  </div>
+
+                  <Link
+                    href={`/peptides/${peptide.slug}`}
+                    className="inline-flex shrink-0 items-center rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                  >
+                    View
+                  </Link>
+                </div>
+
+                {/* Desktop/tablet: keep structured layout */}
+                <div className="hidden gap-3 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-base">
                       {peptide.name}
@@ -234,7 +256,7 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
                     </span>
                   </div>
 
-                  <div className="flex justify-start md:justify-end">
+                  <div className="flex justify-end">
                     <Link
                       href={`/peptides/${peptide.slug}`}
                       className="inline-flex items-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"

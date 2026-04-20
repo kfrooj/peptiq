@@ -40,6 +40,7 @@ function getCategoryStyle(category?: string | null) {
     return {
       bg: "bg-emerald-50",
       ring: "ring-emerald-100",
+      chip: "bg-emerald-100 text-emerald-700",
       icon: "🔥",
     };
   }
@@ -48,6 +49,7 @@ function getCategoryStyle(category?: string | null) {
     return {
       bg: "bg-blue-50",
       ring: "ring-blue-100",
+      chip: "bg-blue-100 text-blue-700",
       icon: "🛠️",
     };
   }
@@ -56,6 +58,7 @@ function getCategoryStyle(category?: string | null) {
     return {
       bg: "bg-purple-50",
       ring: "ring-purple-100",
+      chip: "bg-purple-100 text-purple-700",
       icon: "🧠",
     };
   }
@@ -64,6 +67,7 @@ function getCategoryStyle(category?: string | null) {
     return {
       bg: "bg-amber-50",
       ring: "ring-amber-100",
+      chip: "bg-amber-100 text-amber-700",
       icon: "⏳",
     };
   }
@@ -71,6 +75,7 @@ function getCategoryStyle(category?: string | null) {
   return {
     bg: "bg-gray-50",
     ring: "ring-gray-100",
+    chip: "bg-gray-100 text-gray-700",
     icon: "🧬",
   };
 }
@@ -81,6 +86,7 @@ export default function StackBuilder({
   favoritePeptideIds = [],
 }: Props) {
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [currentStackId, setCurrentStackId] = useState<string | null>(
     initialStack?.id || null
   );
@@ -100,6 +106,16 @@ export default function StackBuilder({
     () => new Set(favoritePeptideIds),
     [favoritePeptideIds]
   );
+
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(
+        peptides
+          .map((peptide) => peptide.category)
+          .filter((category): category is string => Boolean(category))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+  }, [peptides]);
 
   useEffect(() => {
     if (initialStack) {
@@ -161,19 +177,21 @@ export default function StackBuilder({
   const filteredPeptides = useMemo(() => {
     const term = search.toLowerCase().trim();
 
-    if (!term) return peptides;
-
     return peptides.filter((peptide) => {
-      return (
+      const matchesSearch =
+        !term ||
         peptide.name.toLowerCase().includes(term) ||
-        (peptide.category ?? "").toLowerCase().includes(term)
-      );
+        (peptide.category ?? "").toLowerCase().includes(term);
+
+      const matchesCategory =
+        !selectedCategory || peptide.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
     });
-  }, [search, peptides]);
+  }, [search, peptides, selectedCategory]);
 
   function addToStack(peptide: Peptide) {
     const alreadyAdded = stackItems.some((item) => item.id === peptide.id);
-
     if (alreadyAdded) return;
 
     setStackItems((current) => [
@@ -215,7 +233,6 @@ export default function StackBuilder({
     if (stackItems.length === 0) return;
 
     const lines: string[] = [];
-
     lines.push(`Stack: ${stackName || "Untitled Stack"}`);
     lines.push(`Total peptides: ${stackItems.length}`);
     lines.push("");
@@ -282,16 +299,16 @@ export default function StackBuilder({
   const isEditingExistingStack = !!currentStackId;
 
   return (
-    <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-        <h2 className="text-2xl font-semibold text-[var(--color-text)]">
+    <div className="grid gap-4 md:gap-6 md:grid-cols-[1.1fr_0.9fr]">
+      <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
+        <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
           Available Peptides
         </h2>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
+        <p className="mt-1 text-sm text-[var(--color-muted)]">
           Search by name or category and add peptides to your stack.
         </p>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
             Search peptides
           </label>
@@ -304,9 +321,40 @@ export default function StackBuilder({
           />
         </div>
 
-        <div className="mt-6 grid gap-4">
+        <div className="mt-3 -mx-1 overflow-x-auto">
+          <div className="flex min-w-max gap-2 px-1 pb-1">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("")}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                selectedCategory === ""
+                  ? "bg-[var(--color-accent)] text-white"
+                  : "border border-[var(--color-border)] bg-white text-[var(--color-text)]"
+              }`}
+            >
+              All
+            </button>
+
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setSelectedCategory(category)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  selectedCategory === category
+                    ? "bg-[var(--color-accent)] text-white"
+                    : "border border-[var(--color-border)] bg-white text-[var(--color-text)]"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
           {filteredPeptides.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">
               No peptides found.
             </div>
           ) : (
@@ -319,46 +367,43 @@ export default function StackBuilder({
               return (
                 <div
                   key={peptide.id}
-                  className={`rounded-3xl border border-[var(--color-border)] ${style.bg} p-4 shadow-sm sm:p-5`}
+                  className={`flex items-center justify-between gap-2 rounded-xl border border-[var(--color-border)] ${style.bg} px-3 py-2`}
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs ring-1 ${style.ring}`}
+                    >
+                      {style.icon}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                        {peptide.name}
+                      </p>
+                      <p className="truncate text-[11px] text-[var(--color-muted)]">
                         {peptide.category || "Uncategorized"}
                       </p>
-
-                      <div className="mt-1 flex items-center gap-2">
-                        <span
-                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm ring-1 ${style.ring}`}
-                        >
-                          {style.icon}
-                        </span>
-
-                        <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--color-text)] sm:text-xl">
-                          {peptide.name}
-                        </h3>
-                      </div>
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-end gap-2 sm:shrink-0">
-                      <PeptideFavoriteStarButton
-                        peptideId={peptide.id}
-                        initialIsFavorite={favoritePeptideIdSet.has(peptide.id)}
-                      />
+                  <div className="flex items-center gap-1">
+                    <PeptideFavoriteStarButton
+                      peptideId={peptide.id}
+                      initialIsFavorite={favoritePeptideIdSet.has(peptide.id)}
+                    />
 
-                      <button
-                        type="button"
-                        onClick={() => addToStack(peptide)}
-                        disabled={alreadyAdded}
-                        className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                          alreadyAdded
-                            ? "cursor-not-allowed bg-slate-200 text-slate-500"
-                            : "bg-[var(--color-accent)] text-white hover:opacity-90"
-                        }`}
-                      >
-                        {alreadyAdded ? "Added" : "Add to stack"}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addToStack(peptide)}
+                      disabled={alreadyAdded}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                        alreadyAdded
+                          ? "cursor-not-allowed bg-slate-200 text-slate-500"
+                          : "bg-[var(--color-accent)] text-white hover:opacity-90"
+                      }`}
+                    >
+                      {alreadyAdded ? "Added" : "Add"}
+                    </button>
                   </div>
                 </div>
               );
@@ -367,15 +412,14 @@ export default function StackBuilder({
         </div>
       </section>
 
-      <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-semibold text-[var(--color-text)]">
+            <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
               Your Stack
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              {stackItems.length} peptide
-              {stackItems.length === 1 ? "" : "s"} selected
+              {stackItems.length} peptide{stackItems.length === 1 ? "" : "s"} selected
             </p>
           </div>
 
@@ -383,13 +427,13 @@ export default function StackBuilder({
             type="button"
             onClick={clearStack}
             disabled={stackItems.length === 0 && !stackName}
-            className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
+            className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
               stackItems.length === 0 && !stackName
                 ? "cursor-not-allowed border-slate-200 text-slate-400"
                 : "border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
             }`}
           >
-            Clear all
+            Clear
           </button>
         </div>
 
@@ -410,7 +454,7 @@ export default function StackBuilder({
           />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={handleSaveStack}
@@ -426,8 +470,8 @@ export default function StackBuilder({
                 ? "Updating..."
                 : "Saving..."
               : isEditingExistingStack
-              ? "Update stack"
-              : "Save stack"}
+                ? "Update stack"
+                : "Save stack"}
           </button>
 
           <button
@@ -463,39 +507,35 @@ export default function StackBuilder({
         ) : null}
 
         {stackItems.length > 0 ? (
-          <div className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
-            <p className="text-sm font-medium text-[var(--color-text)]">
-              {stackName || "Untitled Stack"}
-            </p>
-
-            <div className="mt-3 space-y-3 text-sm text-[var(--color-muted)]">
-              <p>Total peptides: {stackItems.length}</p>
-
-              {categorySummary.length > 0 ? (
-                <div>
-                  <p className="font-medium text-[var(--color-text)]">
-                    Categories
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {categorySummary.map(([category, count]) => (
-                      <span
-                        key={category}
-                        className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]"
-                      >
-                        {category}: {count}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+          <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                {stackName || "Untitled Stack"}
+              </p>
+              <span className="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]">
+                {stackItems.length} total
+              </span>
             </div>
+
+            {categorySummary.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {categorySummary.map(([category, count]) => (
+                  <span
+                    key={category}
+                    className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]"
+                  >
+                    {category}: {count}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-4">
+        <div className="mt-4 space-y-2">
           {stackItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
-              Add peptides from the left side to start building your stack.
+            <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)]">
+              Add peptides from the left to build your stack.
             </div>
           ) : (
             stackItems.map((item) => {
@@ -504,35 +544,32 @@ export default function StackBuilder({
               return (
                 <div
                   key={item.id}
-                  className={`rounded-3xl border border-[var(--color-border)] ${style.bg} p-4 shadow-sm`}
+                  className={`flex items-center justify-between gap-2 rounded-xl border border-[var(--color-border)] ${style.bg} px-3 py-2`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs ring-1 ${style.ring}`}
+                    >
+                      {style.icon}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                        {item.name}
+                      </p>
+                      <p className="truncate text-[11px] text-[var(--color-muted)]">
                         {item.category || "Uncategorized"}
                       </p>
-
-                      <div className="mt-1 flex items-center gap-2">
-                        <span
-                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm ring-1 ${style.ring}`}
-                        >
-                          {style.icon}
-                        </span>
-
-                        <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--color-text)]">
-                          {item.name}
-                        </h3>
-                      </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => removeFromStack(item.id)}
-                      className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
-                    >
-                      Remove
-                    </button>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeFromStack(item.id)}
+                    className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                  >
+                    Remove
+                  </button>
                 </div>
               );
             })

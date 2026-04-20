@@ -329,9 +329,9 @@ export default async function DashboardContent() {
   );
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-      <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mb-8 sm:rounded-3xl sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <main className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-8">
+      <section className="mb-4 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mb-8 sm:rounded-3xl sm:p-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="mt-1 text-2xl font-bold leading-tight text-[var(--color-text)] sm:text-3xl">
               Welcome back, {displayName}
@@ -356,7 +356,7 @@ export default async function DashboardContent() {
       </section>
 
       {isFirstTimeState ? (
-        <section className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
+        <section className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:mb-6 sm:rounded-3xl sm:p-6">
           <div className="max-w-3xl">
             <h2 className="text-lg font-semibold text-blue-900 sm:text-xl">
               Let’s get your tracking set up
@@ -386,7 +386,7 @@ export default async function DashboardContent() {
         </section>
       ) : null}
 
-      <section className="mt-5 grid gap-4 lg:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="mt-4 grid gap-4 lg:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
           <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Today’s Next Step
@@ -402,7 +402,7 @@ export default async function DashboardContent() {
                   Next action
                 </p>
                 <div className="mt-2">
-                  <p className="text-xl font-semibold text-[var(--color-text)]">
+                  <p className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
                     {nextUnresolvedReminder.plan?.plan_name || "Planned injection"}
                   </p>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">
@@ -411,7 +411,7 @@ export default async function DashboardContent() {
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                   <Link
                     href={nextReminderHref}
                     className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
@@ -440,7 +440,7 @@ export default async function DashboardContent() {
                   Next action
                 </p>
                 <div className="mt-2">
-                  <p className="text-xl font-semibold text-[var(--color-text)]">
+                  <p className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
                     Nothing due right now
                   </p>
                   <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
@@ -450,7 +450,7 @@ export default async function DashboardContent() {
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                   <Link
                     href="/log-injection"
                     className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
@@ -479,7 +479,7 @@ export default async function DashboardContent() {
                   Next action
                 </p>
                 <div className="mt-2">
-                  <p className="text-xl font-semibold text-[var(--color-text)]">
+                  <p className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
                     Start by creating your first plan
                   </p>
                   <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
@@ -488,7 +488,7 @@ export default async function DashboardContent() {
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                   <Link
                     href="/plans"
                     className="rounded-xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-medium text-white transition hover:opacity-90"
@@ -541,7 +541,7 @@ export default async function DashboardContent() {
         </section>
       </section>
 
-      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Active Plans"
           value={String(typedPlans.length)}
@@ -583,7 +583,7 @@ export default async function DashboardContent() {
         />
       </section>
 
-      <section className="mt-5 grid gap-4 sm:mt-6 lg:grid-cols-2">
+      <section className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
           <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
             Quick Actions
@@ -592,7 +592,7 @@ export default async function DashboardContent() {
             Jump straight into the most common tasks.
           </p>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <ActionCard
               title="Log Injection"
               description="Record a new injection and keep reminders in sync."
@@ -600,7 +600,7 @@ export default async function DashboardContent() {
             />
             <ActionCard
               title="Manage Plans"
-              description="Create, update, and organize your active protocols."
+              description="Create, update, and organize active protocols."
               href="/plans"
             />
             <ActionCard
@@ -624,7 +624,7 @@ export default async function DashboardContent() {
             Your latest logged injections.
           </p>
 
-          <div className="mt-4 grid gap-3">
+          <div className="mt-4 grid gap-2.5">
             {!typedLogs.length ? (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm leading-6 text-[var(--color-muted)]">
                 No recent injections logged yet. Once you log activity, it will
@@ -636,24 +636,23 @@ export default async function DashboardContent() {
                   key={log.id}
                   className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
                 >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-text)]">
-                        {log.peptide?.name || "Injection logged"}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                        {[
-                          log.dose_amount !== null && log.dose_unit
-                            ? `${log.dose_amount} ${log.dose_unit}`
-                            : null,
-                          log.site ? `Site: ${log.site}` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "Details recorded"}
-                      </p>
-                    </div>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-sm font-medium text-[var(--color-text)]">
+                      {log.peptide?.name || "Injection logged"}
+                    </p>
 
-                    <p className="text-sm text-[var(--color-muted)] sm:text-right">
+                    <p className="text-xs leading-5 text-[var(--color-muted)]">
+                      {[
+                        log.dose_amount !== null && log.dose_unit
+                          ? `${log.dose_amount} ${log.dose_unit}`
+                          : null,
+                        log.site ? `Site: ${log.site}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Details recorded"}
+                    </p>
+
+                    <p className="text-xs text-[var(--color-muted)]">
                       {formatLocalDateTime(log.injection_at)}
                     </p>
                   </div>
@@ -664,7 +663,7 @@ export default async function DashboardContent() {
         </section>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
+      <section className="mt-4 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:mt-6 sm:rounded-3xl sm:p-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-[var(--color-text)] sm:text-xl">
@@ -674,17 +673,9 @@ export default async function DashboardContent() {
               Quick access to your saved peptides and stacks.
             </p>
           </div>
-
-      {/* <Link
-            href="/profile"
-            className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
-          >
-            Manage Favorites
-          </Link>
-      */}
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div>
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-semibold text-[var(--color-text)]">
@@ -696,21 +687,21 @@ export default async function DashboardContent() {
             </div>
 
             {favoritePeptides.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {favoritePeptides.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2.5"
                   >
                     <Link
                       href={`/peptides/${item.slug}`}
                       className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
                     >
-                      <p className="font-medium text-[var(--color-text)]">
+                      <p className="text-sm font-medium text-[var(--color-text)]">
                         {item.name}
                       </p>
                       {item.category ? (
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                        <p className="mt-0.5 text-xs text-[var(--color-muted)]">
                           {item.category}
                         </p>
                       ) : null}
@@ -736,17 +727,17 @@ export default async function DashboardContent() {
             </div>
 
             {favoriteStacks.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {favoriteStacks.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2.5"
                   >
                     <Link
                       href="/stacks"
                       className="block rounded-lg outline-none transition hover:opacity-80 focus:ring-2 focus:ring-[var(--color-accent)]"
                     >
-                      <p className="font-medium text-[var(--color-text)]">
+                      <p className="text-sm font-medium text-[var(--color-text)]">
                         {item.name}
                       </p>
                     </Link>
@@ -778,17 +769,17 @@ function StatCard({
 }) {
   const content = (
     <div className="rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-5">
-      <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
+      <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
         {title}
       </p>
-      <p className="mt-2 break-words text-2xl font-semibold leading-tight text-[var(--color-text)]">
+      <p className="mt-1.5 break-words text-xl font-semibold leading-tight text-[var(--color-text)] sm:text-2xl">
         {value}
       </p>
       <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
         {subtitle}
       </p>
       {href ? (
-        <div className="mt-3 text-xs font-medium text-[var(--color-accent)]">
+        <div className="mt-2 text-xs font-medium text-[var(--color-accent)]">
           Open →
         </div>
       ) : null}
@@ -821,13 +812,13 @@ function ActionCard({
       href={href}
       className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 transition hover:-translate-y-0.5 hover:shadow-sm"
     >
-      <h3 className="text-base font-semibold text-[var(--color-text)]">
+      <h3 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">
         {title}
       </h3>
-      <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)] sm:text-sm sm:leading-6">
         {description}
       </p>
-      <div className="mt-3 text-sm font-medium text-[var(--color-accent)]">
+      <div className="mt-2 text-sm font-medium text-[var(--color-accent)]">
         Open →
       </div>
     </Link>

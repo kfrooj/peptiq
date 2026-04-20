@@ -30,19 +30,19 @@ export default function InjectionLogActions({ logId }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-1.5">
       <button
         type="button"
         onClick={handleDelete}
         disabled={isPending}
-        className={`rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100 ${
+        className={`rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100 ${
           isPending ? "cursor-not-allowed opacity-70" : ""
         }`}
       >
-        Delete
+        {isPending ? "Deleting..." : "Delete"}
       </button>
 
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="text-[11px] text-red-600">{error}</p> : null}
     </div>
   );
 }

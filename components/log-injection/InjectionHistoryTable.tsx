@@ -322,90 +322,161 @@ export default function InjectionHistoryTable({
         </div>
       ) : null}
 
-    <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
-  <div
-    className="grid gap-0 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]"
-    style={{ gridTemplateColumns: "minmax(0, 2fr) 135px 92px 104px" }}
-  >
-    <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-      Peptide + Plan
-    </div>
-    <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-      Injection Date/Time
-    </div>
-    <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-      Dosage
-    </div>
-    <div className="px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
-      Actions
-    </div>
-  </div>
-
-  {!visibleItems.length ? (
-    <div className="p-6 text-sm text-[var(--color-muted)]">
-      No entries match your filters.
-    </div>
-  ) : (
-    <div className="divide-y divide-[var(--color-border)]">
-      {visibleItems.map((item) => {
-        const actionHref =
-          item.type === "done"
-            ? null
-            : `/log-injection?status=${item.type}&planId=${encodeURIComponent(
-                item.plan_id ?? ""
-              )}&injectionAt=${encodeURIComponent(item.scheduled_at)}`;
-
-        return (
-          <div
-            key={item.id}
-            className="grid gap-0"
-            style={{ gridTemplateColumns: "minmax(0, 2fr) 135px 92px 104px" }}
-          >
-            <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
-              <p className="truncate text-sm font-medium text-[var(--color-text)]">
-                {item.peptide_name}
-              </p>
-              {item.plan_name ? (
-                <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
-                  {item.plan_name}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="border-r border-[var(--color-border)] px-4 py-3">
-              <p className="text-sm leading-5 text-[var(--color-text)]">
-                {formatDateTime(item.scheduled_at)}
-              </p>
-            </div>
-
-            <div className="border-r border-[var(--color-border)] px-4 py-3">
-              <p className="whitespace-nowrap text-sm text-[var(--color-text)]">
-                {item.dose_amount && item.dose_unit
-                  ? `${item.dose_amount} ${item.dose_unit}`
-                  : "—"}
-              </p>
-            </div>
-
-            <div className="flex items-center px-4 py-3">
-              {actionHref ? (
-                <Link
-                  href={actionHref}
-                  className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)] whitespace-nowrap"
-                >
-                  {getActionLabel(item.type)}
-                </Link>
-              ) : (
-                <span className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-green-50 px-3 py-2 text-sm font-medium text-green-700 whitespace-nowrap">
-                  Logged
-                </span>
-              )}
-            </div>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+        {!visibleItems.length ? (
+          <div className="p-6 text-sm text-[var(--color-muted)]">
+            No entries match your filters.
           </div>
-        );
-      })}
-    </div>
-  )}
-</div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <div
+                className="grid gap-0 border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]"
+                style={{ gridTemplateColumns: "minmax(0, 2fr) 135px 92px 104px" }}
+              >
+                <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+                  Peptide + Plan
+                </div>
+                <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+                  Injection Date/Time
+                </div>
+                <div className="border-r border-[var(--color-border)] px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+                  Dosage
+                </div>
+                <div className="px-4 py-3 text-sm font-medium text-left text-[var(--color-text)]">
+                  Actions
+                </div>
+              </div>
+
+              <div className="divide-y divide-[var(--color-border)]">
+                {visibleItems.map((item) => {
+                  const actionHref =
+                    item.type === "done"
+                      ? null
+                      : `/log-injection?status=${item.type}&planId=${encodeURIComponent(
+                          item.plan_id ?? ""
+                        )}&injectionAt=${encodeURIComponent(item.scheduled_at)}`;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="grid gap-0"
+                      style={{ gridTemplateColumns: "minmax(0, 2fr) 135px 92px 104px" }}
+                    >
+                      <div className="min-w-0 border-r border-[var(--color-border)] px-4 py-3">
+                        <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                          {item.peptide_name}
+                        </p>
+                        {item.plan_name ? (
+                          <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
+                            {item.plan_name}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="border-r border-[var(--color-border)] px-4 py-3">
+                        <p className="text-sm leading-5 text-[var(--color-text)]">
+                          {formatDateTime(item.scheduled_at)}
+                        </p>
+                      </div>
+
+                      <div className="border-r border-[var(--color-border)] px-4 py-3">
+                        <p className="whitespace-nowrap text-sm text-[var(--color-text)]">
+                          {item.dose_amount && item.dose_unit
+                            ? `${item.dose_amount} ${item.dose_unit}`
+                            : "—"}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center px-4 py-3">
+                        {actionHref ? (
+                          <Link
+                            href={actionHref}
+                            className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)] whitespace-nowrap"
+                          >
+                            {getActionLabel(item.type)}
+                          </Link>
+                        ) : (
+                          <span className="inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-green-50 px-3 py-2 text-sm font-medium text-green-700 whitespace-nowrap">
+                            Logged
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="divide-y divide-[var(--color-border)] md:hidden">
+              {visibleItems.map((item) => {
+                const actionHref =
+                  item.type === "done"
+                    ? null
+                    : `/log-injection?status=${item.type}&planId=${encodeURIComponent(
+                        item.plan_id ?? ""
+                      )}&injectionAt=${encodeURIComponent(item.scheduled_at)}`;
+
+                return (
+                  <div key={item.id} className="p-3">
+                    <div className="rounded-xl border border-[var(--color-border)] bg-white p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                            {item.peptide_name}
+                          </p>
+                          {item.plan_name ? (
+                            <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
+                              {item.plan_name}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        {actionHref ? (
+                          <Link
+                            href={actionHref}
+                            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-surface-muted)]"
+                          >
+                            {getActionLabel(item.type)}
+                          </Link>
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center justify-center rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700">
+                            Logged
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                            Date / Time
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--color-text)]">
+                            {formatDateTime(item.scheduled_at)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-muted)]">
+                            Dosage
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--color-text)]">
+                            {item.dose_amount && item.dose_unit
+                              ? `${item.dose_amount} ${item.dose_unit}`
+                              : "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
 
       {filteredItems.length > 0 ? (
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

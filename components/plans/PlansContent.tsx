@@ -389,8 +389,8 @@ export default async function PlansContent() {
   const showUsageBanner = planTier === "free";
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-      <div className="mb-5 sm:mb-7">
+    <main className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-8">
+      <div className="mb-4 sm:mb-7">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)] sm:text-3xl">
@@ -488,7 +488,7 @@ export default async function PlansContent() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4">
+          <div className="mt-4 grid gap-3">
             {!plans.length ? (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-5 text-sm text-[var(--color-muted)] sm:p-6">
                 No plans yet. Create your first plan to start reminders and adherence tracking.
@@ -523,15 +523,15 @@ export default async function PlansContent() {
                 return (
                   <article
                     key={plan.id}
-                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5"
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 sm:p-5"
                   >
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="truncate text-base font-semibold text-[var(--color-text)] sm:text-lg">
+                          <h3 className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-lg">
                             {plan.plan_name}
                           </h3>
-                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          <p className="mt-0.5 text-xs text-[var(--color-muted)]">
                             {plan.peptide?.name || "Unknown peptide"}
                           </p>
                         </div>
@@ -549,9 +549,9 @@ export default async function PlansContent() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-[var(--color-muted)] sm:grid-cols-3">
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs text-[var(--color-muted)] sm:grid-cols-3">
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
                             Dose
                           </p>
                           <p className="mt-0.5 text-sm text-[var(--color-text)]">
@@ -560,7 +560,7 @@ export default async function PlansContent() {
                         </div>
 
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
                             Frequency
                           </p>
                           <p className="mt-0.5 text-sm text-[var(--color-text)]">
@@ -572,7 +572,7 @@ export default async function PlansContent() {
                         </div>
 
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
                             Start
                           </p>
                           <p className="mt-0.5 text-sm text-[var(--color-text)]">
@@ -582,7 +582,7 @@ export default async function PlansContent() {
 
                         {plan.end_date ? (
                           <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
                               End
                             </p>
                             <p className="mt-0.5 text-sm text-[var(--color-text)]">
@@ -593,7 +593,7 @@ export default async function PlansContent() {
 
                         {plan.default_time ? (
                           <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
                               Time
                             </p>
                             <p className="mt-0.5 text-sm text-[var(--color-text)]">
@@ -603,7 +603,7 @@ export default async function PlansContent() {
                         ) : null}
 
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
                             Reminders
                           </p>
                           <p className="mt-0.5 text-sm text-[var(--color-text)]">
@@ -614,9 +614,9 @@ export default async function PlansContent() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <div
-                          className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
+                          className={`inline-flex w-fit items-center gap-2 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${adherenceStyles.bg} ${adherenceStyles.border} ${adherenceStyles.text}`}
                         >
                           <span>60-day adherence</span>
                           <span>{adherence}%</span>
@@ -633,7 +633,7 @@ export default async function PlansContent() {
                         </span>
                       </div>
 
-                      <div>
+                      <div className="mt-2">
                         <PlanAdherenceSparkline
                           points={trend}
                           lineColor={adherenceStyles.line}
@@ -642,13 +642,13 @@ export default async function PlansContent() {
                           reminderDetailsByDay={reminderDetailsByDay}
                           defaultDetailsOpen={false}
                         />
-                        <p className="mt-2 text-xs text-[var(--color-muted)]">
+                        <p className="mt-1 text-[11px] text-[var(--color-muted)]">
                           Based on the last 60 days of reminders.
                         </p>
                       </div>
 
                       {plan.notes ? (
-                        <div className="rounded-xl bg-white/70 px-3 py-2 text-sm text-[var(--color-muted)]">
+                        <div className="rounded-xl bg-white/70 px-3 py-1.5 text-xs text-[var(--color-muted)]">
                           <span className="font-medium text-[var(--color-text)]">
                             Notes:
                           </span>{" "}
@@ -656,7 +656,7 @@ export default async function PlansContent() {
                         </div>
                       ) : null}
 
-                      <div className="flex items-center justify-end">
+                      <div className="flex justify-end pt-1">
                         <InjectionPlanActions
                           planId={plan.id}
                           active={plan.active}
