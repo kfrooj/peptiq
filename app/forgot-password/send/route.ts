@@ -16,7 +16,8 @@ export async function POST(request: Request) {
   const formData = await request.formData();
 
   const rawEmail = formData.get("email");
-  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  const email =
+    typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
 
   if (!email) {
     redirect("/forgot-password?error=missing-email");
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestOrigin;
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/reset-password`,
+    redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
   });
 
   if (error) {
