@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { createInjectionLog } from "@/app/(protected)/log-injection/actions";
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { createInjectionPlan } from "@/app/(protected)/plans/actions";
 
 type Peptide = {
   id: string;
@@ -10,346 +10,310 @@ type Peptide = {
   category: string | null;
 };
 
-type Plan = {
-  id: string;
-  plan_name: string;
-  peptide_id: string;
-  active: boolean;
-};
-
 type Props = {
   peptides: Peptide[];
-  plans: Plan[];
-  initialPlanId?: string;
-  initialInjectionAt?: string;
+  disabled?: boolean;
+  disabledReason?: string;
+  upgradeHref?: string;
 };
-
-type InjectionSite =
-  | "Left upper arm"
-  | "Right upper arm"
-  | "Left abdomen"
-  | "Right abdomen"
-  | "Left thigh"
-  | "Right thigh"
-  | "Left glute"
-  | "Right glute";
-
-type Hotspot = {
-  id: InjectionSite;
-  label: string;
-  left: string;
-  top: string;
-  width: string;
-  height: string;
-};
-
-const HOTSPOTS: Hotspot[] = [
-  {
-    id: "Left upper arm",
-    label: "Left arm",
-    left: "11.8%",
-    top: "27%",
-    width: "5.2%",
-    height: "9.0%",
-  },
-  {
-    id: "Right upper arm",
-    label: "Right arm",
-    left: "39.2%",
-    top: "27%",
-    width: "5.2%",
-    height: "9.0%",
-  },
-  {
-    id: "Left abdomen",
-    label: "Left abdomen",
-    left: "20.1%",
-    top: "35.0%",
-    width: "6.9%",
-    height: "6.1%",
-  },
-  {
-    id: "Right abdomen",
-    label: "Right abdomen",
-    left: "30.4%",
-    top: "35%",
-    width: "6.9%",
-    height: "6.1%",
-  },
-  {
-    id: "Left thigh",
-    label: "Left thigh",
-    left: "17%",
-    top: "45%",
-    width: "7.1%",
-    height: "12.0%",
-  },
-  {
-    id: "Right thigh",
-    label: "Right thigh",
-    left: "33%",
-    top: "45%",
-    width: "7.1%",
-    height: "12.0%",
-  },
-  {
-    id: "Left upper arm",
-    label: "Left arm",
-    left: "55.7%",
-    top: "27%",
-    width: "5.2%",
-    height: "9.0%",
-  },
-  {
-    id: "Right upper arm",
-    label: "Right arm",
-    left: "84%",
-    top: "27%",
-    width: "5.2%",
-    height: "9.0%",
-  },
-  {
-    id: "Left glute",
-    label: "Left glute",
-    left: "62%",
-    top: "42%",
-    width: "7.3%",
-    height: "6.6%",
-  },
-  {
-    id: "Right glute",
-    label: "Right glute",
-    left: "76%",
-    top: "42%",
-    width: "7.3%",
-    height: "6.6%",
-  },
-  {
-    id: "Left thigh",
-    label: "Left thigh",
-    left: "60%",
-    top: "48%",
-    width: "6.9%",
-    height: "11.6%",
-  },
-  {
-    id: "Right thigh",
-    label: "Right thigh",
-    left: "78%",
-    top: "48%",
-    width: "6.9%",
-    height: "11.6%",
-  },
-];
 
 const fieldClassName =
-  "w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)]";
+  "w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:ring-2 focus:ring-[var(--color-accent)] disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-[var(--color-muted)]";
 
-export default function NewInjectionLogForm({
+export default function NewInjectionPlanForm({
   peptides,
-  plans,
-  initialPlanId = "",
-  initialInjectionAt = "",
+  disabled = false,
+  disabledReason,
+  upgradeHref = "/pricing",
 }: Props) {
-  const [peptideId, setPeptideId] = useState<string>("");
-  const [planId, setPlanId] = useState<string>(initialPlanId ?? "");
-  const [injectionAt, setInjectionAt] = useState<string>(initialInjectionAt ?? "");
-  const [doseAmount, setDoseAmount] = useState<string>("");
-  const [doseUnit, setDoseUnit] = useState<string>("mcg");
-  const [site, setSite] = useState<InjectionSite | "">("");
-  const [notes, setNotes] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [peptideId, setPeptideId] = useState("");
+  const [planName, setPlanName] = useState("");
+  const [doseAmount, setDoseAmount] = useState("");
+  const [doseUnit, setDoseUnit] = useState("mcg");
+  const [frequencyType, setFrequencyType] = useState("daily");
+  const [frequencyValue, setFrequencyValue] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [defaultTime, setDefaultTime] = useState("09:00");
+  const [active, setActive] = useState(true);
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reminderOffsetHours, setReminderOffsetHours] = useState("24");
+  const [notes, setNotes] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    setPlanId(initialPlanId ?? "");
-  }, [initialPlanId]);
+  const isFormLocked = disabled;
+  const isSubmitDisabled = isPending || isFormLocked;
 
-  useEffect(() => {
-    setInjectionAt(initialInjectionAt ?? "");
-  }, [initialInjectionAt]);
-
-  const selectedPlan = useMemo<Plan | null>(() => {
-    return plans.find((p) => p.id === planId) ?? null;
-  }, [plans, planId]);
-
-  useEffect(() => {
-    if (selectedPlan) {
-      setPeptideId(selectedPlan.peptide_id ?? "");
-    }
-  }, [selectedPlan]);
+  function resetForm() {
+    setPeptideId("");
+    setPlanName("");
+    setDoseAmount("");
+    setDoseUnit("mcg");
+    setFrequencyType("daily");
+    setFrequencyValue("");
+    setStartDate("");
+    setEndDate("");
+    setDefaultTime("09:00");
+    setActive(true);
+    setRemindersEnabled(true);
+    setReminderOffsetHours("24");
+    setNotes("");
+  }
 
   function handleSubmit() {
-    setError("");
+    if (isFormLocked) {
+      setMessage("");
+      setError(
+        disabledReason || "Upgrade required to create another active plan."
+      );
+      return;
+    }
+
     setMessage("");
+    setError("");
 
-    if (!peptideId) {
-      setError("Select peptide");
-      return;
-    }
-
-    if (!injectionAt) {
-      setError("Pick time");
-      return;
-    }
-
+    if (!peptideId) return setError("Select a peptide.");
+    if (!planName.trim()) return setError("Enter a plan name.");
     if (!doseAmount || Number(doseAmount) <= 0) {
-      setError("Enter dose");
-      return;
+      return setError("Enter a valid dose.");
+    }
+    if (!startDate) return setError("Choose a start date.");
+    if (!defaultTime) return setError("Choose a time.");
+
+    if (
+      frequencyType === "every_x_days" &&
+      (!frequencyValue || Number(frequencyValue) < 1)
+    ) {
+      return setError("Enter days between injections.");
     }
 
-    if (!site) {
-      setError("Select site");
-      return;
+    if (
+      remindersEnabled &&
+      (!reminderOffsetHours || Number(reminderOffsetHours) < 1)
+    ) {
+      return setError("Invalid reminder timing.");
     }
 
     startTransition(async () => {
-      const res = await createInjectionLog({
+      const result = await createInjectionPlan({
         peptideId,
-        planId: planId || null,
-        injectionAt,
+        planName: planName.trim(),
         doseAmount: Number(doseAmount),
         doseUnit,
-        site,
+        frequencyType,
+        frequencyValue:
+          frequencyType === "every_x_days" && frequencyValue
+            ? Number(frequencyValue)
+            : null,
+        startDate,
+        endDate: endDate || null,
+        defaultTime,
+        active,
+        remindersEnabled,
+        reminderOffsetHours: Number(reminderOffsetHours),
         notes: notes.trim() || null,
       });
 
-      if (res.success) {
-        setMessage("Logged ✓");
-        setDoseAmount("");
-        setNotes("");
+      if (result.success) {
+        setMessage("Plan created.");
+        setError("");
+        resetForm();
       } else {
-        setError(res.error || "Could not log injection.");
+        setError(result.error || "Could not create plan.");
+        setMessage("");
       }
     });
   }
 
   return (
     <div className="grid gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        <select
-          value={planId}
-          onChange={(e) => setPlanId(e.target.value)}
-          className={fieldClassName}
-        >
-          <option value="">No plan</option>
-          {plans.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.plan_name}
-            </option>
-          ))}
-        </select>
+      {isFormLocked ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm font-semibold text-amber-900">
+            Upgrade required
+          </p>
+          <p className="mt-1 text-sm text-amber-800">
+            {disabledReason ||
+              "Free includes up to 2 active plans. Upgrade to Pro."}
+          </p>
 
-        <select
-          value={peptideId}
-          onChange={(e) => setPeptideId(e.target.value)}
-          className={fieldClassName}
-          disabled={Boolean(selectedPlan)}
-        >
-          <option value="">Peptide</option>
-          {peptides.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div className="mt-3 flex gap-2">
+            <Link
+              href={upgradeHref}
+              className="rounded-full bg-[var(--color-text)] px-3 py-2 text-sm font-semibold text-white"
+            >
+              Upgrade
+            </Link>
 
-      <input
-        type="datetime-local"
-        value={injectionAt}
-        onChange={(e) => setInjectionAt(e.target.value)}
-        className={fieldClassName}
-      />
+            <a
+              href="#your-plans"
+              className="rounded-full border border-[var(--color-border)] px-3 py-2 text-sm"
+            >
+              View plans
+            </a>
+          </div>
+        </div>
+      ) : null}
 
-      <div className="grid grid-cols-[1fr_80px] gap-2">
+      <fieldset
+        disabled={isFormLocked}
+        className={`grid gap-3 ${isFormLocked ? "opacity-60" : ""}`}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <select
+            value={peptideId}
+            onChange={(e) => setPeptideId(e.target.value)}
+            className={fieldClassName}
+          >
+            <option value="">Select peptide</option>
+            {peptides.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            value={planName}
+            onChange={(e) => setPlanName(e.target.value)}
+            placeholder="Plan name"
+            className={fieldClassName}
+          />
+        </div>
+
+        <div className="grid gap-3 grid-cols-2">
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={doseAmount}
+            onChange={(e) => setDoseAmount(e.target.value)}
+            placeholder="Dose"
+            className={fieldClassName}
+          />
+
+          <select
+            value={doseUnit}
+            onChange={(e) => setDoseUnit(e.target.value)}
+            className={fieldClassName}
+          >
+            <option value="mcg">mcg</option>
+            <option value="mg">mg</option>
+            <option value="IU">IU</option>
+            <option value="mL">mL</option>
+          </select>
+        </div>
+
+        <div className="grid gap-3 grid-cols-2">
+          <select
+            value={frequencyType}
+            onChange={(e) => setFrequencyType(e.target.value)}
+            className={fieldClassName}
+          >
+            <option value="daily">Daily</option>
+            <option value="every_x_days">Every X days</option>
+          </select>
+
+          {frequencyType === "every_x_days" ? (
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={frequencyValue}
+              onChange={(e) => setFrequencyValue(e.target.value)}
+              placeholder="Days"
+              className={fieldClassName}
+            />
+          ) : (
+            <div />
+          )}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className={fieldClassName}
+          />
+
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className={fieldClassName}
+          />
+        </div>
+
         <input
-          type="number"
-          value={doseAmount}
-          onChange={(e) => setDoseAmount(e.target.value)}
-          placeholder="Dose"
+          type="time"
+          value={defaultTime}
+          onChange={(e) => setDefaultTime(e.target.value)}
           className={fieldClassName}
         />
 
-        <select
-          value={doseUnit}
-          onChange={(e) => setDoseUnit(e.target.value)}
-          className={fieldClassName}
-        >
-          <option value="mcg">mcg</option>
-          <option value="mg">mg</option>
-          <option value="IU">iu</option>
-          <option value="mL">ml</option>
-        </select>
-      </div>
-
-      <div className="rounded-2xl border p-3">
-        <p className="mb-2 text-xs text-[var(--color-muted)]">
-          Tap injection site
-        </p>
-
-        <div className="relative mx-auto max-w-xs overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
-          <div className="relative aspect-[1024/1536] w-full">
-            <Image
-              src="/injection-sites-body-map-v2.png"
-              alt="Injection body map"
-              fill
-              className="object-contain"
-              priority
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 space-y-2">
+          <label className="flex justify-between text-sm">
+            <span>Active</span>
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
             />
+          </label>
 
-            {HOTSPOTS.map((spot, i) => {
-              const active = site === spot.id;
+          <label className="flex justify-between text-sm">
+            <span>Reminders</span>
+            <input
+              type="checkbox"
+              checked={remindersEnabled}
+              onChange={(e) => setRemindersEnabled(e.target.checked)}
+            />
+          </label>
 
-              return (
-                <button
-                  key={`${spot.id}-${spot.left}-${spot.top}-${i}`}
-                  type="button"
-                  onClick={() => setSite(spot.id)}
-                  className={`absolute rounded-[40%] border-2 transition ${
-                    active
-                      ? "border-red-600 bg-red-500/22 ring-2 ring-red-300"
-                      : "border-red-500/80 bg-red-400/10 hover:bg-red-400/18"
-                  }`}
-                  style={{
-                    left: spot.left,
-                    top: spot.top,
-                    width: spot.width,
-                    height: spot.height,
-                  }}
-                  aria-label={spot.label}
-                  title={spot.label}
-                />
-              );
-            })}
-          </div>
+          {remindersEnabled ? (
+            <select
+              value={reminderOffsetHours}
+              onChange={(e) => setReminderOffsetHours(e.target.value)}
+              className={fieldClassName}
+            >
+              <option value="1">1h before</option>
+              <option value="6">6h before</option>
+              <option value="12">12h before</option>
+              <option value="24">24h before</option>
+              <option value="48">48h before</option>
+            </select>
+          ) : null}
         </div>
 
-        <p className="mt-2 text-center text-xs text-[var(--color-muted)]">
-          {site || "No site selected"}
-        </p>
-      </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="Notes (optional)"
+          className={fieldClassName}
+        />
+      </fieldset>
 
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        rows={2}
-        placeholder="Notes (optional)"
-        className={fieldClassName}
-      />
+      {!isFormLocked ? (
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitDisabled}
+          className={`rounded-xl py-2.5 text-sm font-semibold text-white ${
+            isSubmitDisabled
+              ? "bg-slate-400"
+              : "bg-[var(--color-accent)] hover:opacity-90"
+          }`}
+        >
+          {isPending ? "Saving..." : "Create plan"}
+        </button>
+      ) : null}
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={isPending}
-        className="rounded-xl bg-[var(--color-accent)] py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? "Saving..." : "Log injection"}
-      </button>
-
-      {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+      {message ? <div className="text-sm text-emerald-700">{message}</div> : null}
+      {error ? <div className="text-sm text-rose-700">{error}</div> : null}
     </div>
   );
 }

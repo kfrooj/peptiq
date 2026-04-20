@@ -16,26 +16,46 @@ type Props = {
 
 type PageSizeOption = 30 | 60 | 100 | "all";
 
-function getCategoryStyle(category: string) {
+function getCategoryMeta(category: string) {
   const value = category.toLowerCase();
 
   if (value.includes("fat") || value.includes("weight")) {
-    return "bg-emerald-50 text-emerald-700";
+    return {
+      style: "bg-emerald-50 text-emerald-700",
+      icon: "🔥",
+      label: "Weight",
+    };
   }
 
   if (value.includes("healing") || value.includes("recovery")) {
-    return "bg-blue-50 text-blue-700";
+    return {
+      style: "bg-blue-50 text-blue-700",
+      icon: "🛠️",
+      label: "Healing",
+    };
   }
 
   if (value.includes("cognitive") || value.includes("brain")) {
-    return "bg-purple-50 text-purple-700";
+    return {
+      style: "bg-purple-50 text-purple-700",
+      icon: "🧠",
+      label: "Cognitive",
+    };
   }
 
   if (value.includes("longevity") || value.includes("anti")) {
-    return "bg-amber-50 text-amber-700";
+    return {
+      style: "bg-amber-50 text-amber-700",
+      icon: "⏳",
+      label: "Longevity",
+    };
   }
 
-  return "bg-gray-100 text-gray-700";
+  return {
+    style: "bg-gray-100 text-gray-700",
+    icon: "🧬",
+    label: category,
+  };
 }
 
 export default function PeptideSearchList({ peptides = [] }: Props) {
@@ -92,11 +112,10 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
   const visiblePeptides = filteredPeptides.slice(startIndex, endIndex);
 
   const hasActiveFilters = Boolean(search.trim() || selectedCategory);
-  const hasNextPage = currentPage < totalPages;
-  const hasPreviousPage = currentPage > 1;
 
   return (
     <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
+      {/* HEADER */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -104,39 +123,30 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
               Browse peptides
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Explore detailed reference pages, dosage ranges, calculator-ready defaults,
-              and research links for each peptide.
+              Explore detailed reference pages and usage insights.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/peptides/glossary"
-              className="inline-flex items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:bg-white"
-            >
-              Peptides Glossary
-            </Link>
-
-            <div className="text-xs font-medium text-[var(--color-muted)] sm:text-sm">
-              {totalResults} result{totalResults === 1 ? "" : "s"}
-            </div>
+          <div className="text-xs font-medium text-[var(--color-muted)] sm:text-sm">
+            {totalResults} result{totalResults === 1 ? "" : "s"}
           </div>
         </div>
 
+        {/* FILTERS */}
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
-          <div className="grid gap-3 md:grid-cols-[1.4fr_0.9fr_0.7fr_auto]">
+          <div className="grid gap-3 md:grid-cols-3">
             <input
               type="text"
-              placeholder="Search by peptide name or category"
+              placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] transition focus:border-[var(--color-accent)]"
+              className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm"
             />
 
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-accent)]"
+              className="w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm"
             >
               <option value="">All categories</option>
               {categories.map((category) => (
@@ -146,183 +156,72 @@ export default function PeptideSearchList({ peptides = [] }: Props) {
               ))}
             </select>
 
-            <select
-              value={String(pageSize)}
-              onChange={(e) => {
-                const value = e.target.value;
-                setPageSize(
-                  value === "all" ? "all" : (Number(value) as 30 | 60 | 100)
-                );
-              }}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-accent)]"
-            >
-              <option value="30">Show 30</option>
-              <option value="60">Show 60</option>
-              <option value="100">Show 100</option>
-              <option value="all">Show all</option>
-            </select>
-
             <button
               type="button"
               onClick={() => {
                 setSearch("");
                 setSelectedCategory("");
-                setPageSize(30);
                 setPage(1);
               }}
-              className="w-full rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] md:w-auto"
+              className="rounded-xl border px-3 py-2.5 text-sm"
             >
-              Clear filters
+              Clear
             </button>
           </div>
-
-          {hasActiveFilters ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {search.trim() ? (
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]">
-                  Search: {search.trim()}
-                </span>
-              ) : null}
-
-              {selectedCategory ? (
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[var(--color-text)]">
-                  Category: {selectedCategory}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--color-border)]">
-        <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] gap-3 bg-[var(--color-surface-muted)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)] md:grid">
-          <div>Peptide</div>
-          <div>Category</div>
-          <div>Action</div>
-        </div>
+      {/* LIST */}
+      <div className="mt-5 divide-y">
+        {visiblePeptides.map((peptide) => {
+          const meta = getCategoryMeta(peptide.category);
 
-        {!visiblePeptides.length ? (
-          <div className="p-8 text-center">
-            <p className="text-base font-medium text-[var(--color-text)]">
-              No peptides match your filters
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-muted)]">
-              Try a different search term or clear the selected category.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-[var(--color-border)]">
-            {visiblePeptides.map((peptide) => (
-              <div key={peptide.id} className="px-3 py-2.5 sm:px-4 sm:py-3">
-                {/* Mobile: tight single-row layout */}
+          return (
+            <div key={peptide.id} className="py-3">
+              {/* MOBILE PREMIUM ROW */}
               <div className="flex items-center justify-between gap-2 md:hidden">
-  <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-      {peptide.name}
-    </p>
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                  <p className="truncate text-sm font-semibold">
+                    {peptide.name}
+                  </p>
 
-    <span
-      className={`inline-flex max-w-[80px] shrink-0 overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium ${getCategoryStyle(
-        peptide.category
-      )}`}
-    >
-      {peptide.category}
-    </span>
-  </div>
-
-  <Link
-    href={`/peptides/${peptide.slug}`}
-    className="inline-flex h-7 shrink-0 items-center rounded-md border border-[var(--color-border)] bg-white px-2 text-[11px] font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
-  >
-    View
-  </Link>
-</div>
-
-                {/* Desktop/tablet: keep structured layout */}
-                <div className="hidden gap-3 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-base">
-                      {peptide.name}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getCategoryStyle(
-                        peptide.category
-                      )}`}
-                    >
-                      {peptide.category}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Link
-                      href={`/peptides/${peptide.slug}`}
-                      className="inline-flex items-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
-                    >
-                      View
-                    </Link>
-                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${meta.style}`}
+                  >
+                    <span>{meta.icon}</span>
+                    <span>{meta.label}</span>
+                  </span>
                 </div>
+
+                <Link
+                  href={`/peptides/${peptide.slug}`}
+                  className="shrink-0 rounded-md border px-2 py-1 text-[11px]"
+                >
+                  View
+                </Link>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {totalResults > 0 ? (
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-[var(--color-muted)]">
-            Showing{" "}
-            <span className="font-medium text-[var(--color-text)]">
-              {totalResults === 0 ? 0 : startIndex + 1}
-            </span>
-            {" "}to{" "}
-            <span className="font-medium text-[var(--color-text)]">
-              {Math.min(endIndex, totalResults)}
-            </span>
-            {" "}of{" "}
-            <span className="font-medium text-[var(--color-text)]">
-              {totalResults}
-            </span>
-          </p>
+              {/* DESKTOP */}
+              <div className="hidden md:grid md:grid-cols-[1.4fr_1fr_auto] md:items-center md:gap-3">
+                <p className="truncate font-semibold">{peptide.name}</p>
 
-          {pageSize !== "all" ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={!hasPreviousPage}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
-                  hasPreviousPage
-                    ? "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-accent)]"
-                    : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-muted)]"
-                }`}
-              >
-                Previous
-              </button>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs ${meta.style}`}
+                >
+                  {meta.icon} {meta.label}
+                </span>
 
-              <span className="px-2 text-sm text-[var(--color-muted)]">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={!hasNextPage}
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
-                  hasNextPage
-                    ? "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-accent)]"
-                    : "cursor-not-allowed border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-muted)]"
-                }`}
-              >
-                Next
-              </button>
+                <Link
+                  href={`/peptides/${peptide.slug}`}
+                  className="rounded-xl border px-3 py-2 text-sm"
+                >
+                  View
+                </Link>
+              </div>
             </div>
-          ) : null}
-        </div>
-      ) : null}
+          );
+        })}
+      </div>
     </section>
   );
 }
