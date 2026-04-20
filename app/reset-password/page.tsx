@@ -8,6 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 function getFriendlyResetError(message?: string) {
   const lower = (message || "").toLowerCase();
 
+  if (lower.includes("known to be weak") || lower.includes("easy to guess")) {
+    return "That password is too common or easy to guess. Try something more unique.";
+  }
+
   if (lower.includes("session")) {
     return "Your reset session is invalid or has expired. Please request a new reset link.";
   }
@@ -23,6 +27,15 @@ function getFriendlyResetError(message?: string) {
   return "We could not update your password right now. Please try again.";
 }
 
+function getPasswordChecks(password: string) {
+  return {
+    minLength: password.length >= 8,
+    hasLetter: /[a-zA-Z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSymbol: /[^a-zA-Z0-9]/.test(password),
+  };
+}
+
 export default function ResetPasswordPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -34,6 +47,8 @@ export default function ResetPasswordPage() {
   const [saving, setSaving] = useState(false);
   const [loadingSession, setLoadingSession] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
+
+  const passwordChecks = useMemo(() => getPasswordChecks(password), [password]);
 
   useEffect(() => {
     let mounted = true;
@@ -49,15 +64,30 @@ export default function ResetPasswordPage() {
       if (!mounted) return;
 
       if (error) {
-        setErrorMessage(
-          "We could not verify your reset session. Please request a new reset link."
-        );
+        console.error("Reset getSession error:", error);
+      }
+
+      if (session) {
+        setSessionReady(true);
         setLoadingSession(false);
         return;
       }
 
-      if (!session) {
-        setErrorMessage("Your reset link has expired or is invalid.");
+      const {
+        data: refreshedData,
+        error: refreshError,
+      } = await supabase.auth.refreshSession();
+
+      if (!mounted) return;
+
+      if (refreshError) {
+        console.error("Reset refreshSession error:", refreshError);
+      }
+
+      if (!refreshedData.session) {
+        setErrorMessage(
+          "Your reset link is invalid or has expired. Please request a new one."
+        );
         setLoadingSession(false);
         return;
       }
@@ -98,7 +128,18 @@ export default function ResetPasswordPage() {
     setErrorMessage(null);
 
     if (password.length < 8) {
-      setErrorMessage("Use at least 8 characters for your password.");
+      setErrorMessage("Your password must be at least 8 characters long.");
+      return;
+    }
+
+    if (
+      !passwordChecks.hasLetter ||
+      !passwordChecks.hasNumber ||
+      !passwordChecks.hasSymbol
+    ) {
+      setErrorMessage(
+        "Use at least 8 characters with a mix of letters, numbers, and symbols."
+      );
       return;
     }
 
@@ -124,6 +165,7 @@ export default function ResetPasswordPage() {
     });
 
     if (error) {
+      console.error("Reset updateUser error:", error);
       setSaving(false);
       setErrorMessage(getFriendlyResetError(error.message));
       return;
@@ -203,9 +245,11 @@ export default function ResetPasswordPage() {
             />
           </label>
 
-          <p className="text-xs leading-5 text-[var(--color-muted)]">
-            Use at least 8 characters for your password.
-          </p>
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3">
+            <p className="text-xs leading-5 text-[var(--color-muted)]">
+              Use at least 8 characters with letters, numbers, and symbols. Avoid common or easy-to-guess passwords.
+            </p>
+          </div>
 
           {loadingSession ? (
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-muted)]">
