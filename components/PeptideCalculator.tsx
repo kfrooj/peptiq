@@ -51,7 +51,6 @@ export default function PeptideCalculator({
     initialSampleMcg || "250"
   );
   const [selectedSyringeMl, setSelectedSyringeMl] = useState("1");
-  const [copied, setCopied] = useState(false);
 
   const selectedPeptideName = initialPeptideName;
 
@@ -104,314 +103,244 @@ export default function PeptideCalculator({
     selectedSyringeMl,
   ]);
 
-  async function handleCopyResult() {
-    if (!results) return;
-
-    const lines = [];
-
-    if (selectedPeptideName) {
-      lines.push(
-        `Mix: ${selectedPeptideName}, ${results.vialMg} mg in ${results.mixingMl} ml`
-      );
-    } else {
-      lines.push(`Mix: ${results.vialMg} mg in ${results.mixingMl} ml`);
-    }
-
-    lines.push(`Dose: ${results.desiredMcg} mcg`);
-    lines.push(`Volume to draw: ${results.requiredVolumeMl} ml`);
-    lines.push(`Syringe units: ${results.requiredIU} iu`);
-    lines.push(`Doses per vial: ${results.dosesPerVial}`);
-
-    const text = lines.join("\n");
-
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   return (
-    <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-[var(--color-text)]">
-                Inputs
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                Adjust the vial amount, mix volume, desired dose, and syringe size.
-              </p>
-            </div>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+      <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
+              Inputs
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+              Adjust the vial amount, mix volume, desired dose, and syringe size.
+            </p>
           </div>
+        </div>
 
-          {selectedPeptideName ? (
-            <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
-              Calculator opened for:{" "}
-              <span className="font-semibold">{selectedPeptideName}</span>
-            </div>
-          ) : null}
+        {selectedPeptideName ? (
+          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+            Calculator opened for:{" "}
+            <span className="font-semibold">{selectedPeptideName}</span>
+          </div>
+        ) : null}
 
-          <div className="mt-6 grid gap-5">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                How much peptide is in the vial?
-              </label>
+        <div className="mt-5 grid gap-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+              How much peptide is in the vial?
+            </label>
 
-              <div className="flex flex-wrap gap-2">
-                {vialOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setUseCustomVial(false);
-                      setSelectedVialMg(option.value);
-                    }}
-                    className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
-                      !useCustomVial && selectedVialMg === option.value
-                        ? "border-transparent bg-[var(--color-accent)] text-white"
-                        : "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-accent)]"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-
+            <div className="flex flex-wrap gap-2">
+              {vialOptions.map((option) => (
                 <button
+                  key={option.value}
                   type="button"
-                  onClick={() => setUseCustomVial(true)}
-                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
-                    useCustomVial
+                  onClick={() => {
+                    setUseCustomVial(false);
+                    setSelectedVialMg(option.value);
+                  }}
+                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    !useCustomVial && selectedVialMg === option.value
                       ? "border-transparent bg-[var(--color-accent)] text-white"
                       : "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-accent)]"
                   }`}
                 >
-                  Custom
+                  {option.label}
                 </button>
-              </div>
+              ))}
 
-              {useCustomVial ? (
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={customVialMg}
-                  onChange={(e) => setCustomVialMg(e.target.value)}
-                  className="mt-3 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-                  placeholder="Enter mg"
-                />
-              ) : null}
+              <button
+                type="button"
+                onClick={() => setUseCustomVial(true)}
+                className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                  useCustomVial
+                    ? "border-transparent bg-[var(--color-accent)] text-white"
+                    : "border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-accent)]"
+                }`}
+              >
+                Custom
+              </button>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                  How much BAC water are you adding (ml)?
-                </label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={mixingVolumeMl}
-                  onChange={(e) => setMixingVolumeMl(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-                />
-              </div>
+            {useCustomVial ? (
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={customVialMg}
+                onChange={(e) => setCustomVialMg(e.target.value)}
+                className="mt-3 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+                placeholder="Enter mg"
+              />
+            ) : null}
+          </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                  How much peptide do you want in each dose (mcg)?
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={desiredAmountMcg}
-                  onChange={(e) => setDesiredAmountMcg(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-                />
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+                How much BAC water are you adding (ml)?
+              </label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={mixingVolumeMl}
+                onChange={(e) => setMixingVolumeMl(e.target.value)}
+                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+              />
             </div>
 
             <div>
               <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                Syringe size
+                How much peptide do you want in each dose (mcg)?
               </label>
-              <select
-                value={selectedSyringeMl}
-                onChange={(e) => setSelectedSyringeMl(e.target.value)}
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={desiredAmountMcg}
+                onChange={(e) => setDesiredAmountMcg(e.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
-              >
-                {syringeOptions.map((option) => (
-                  <option key={option.ml} value={option.ml}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {results ? (
-              <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
-                <p className="text-sm font-medium text-[var(--color-text)]">
-                  Quick summary
-                </p>
-                <div className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
-                  <p>
-                    {results.vialMg} mg mixed with {results.mixingMl} ml creates a
-                    concentration of {results.concentrationMcgPerMl} mcg/ml.
-                  </p>
-                  <p>
-                    A {results.desiredMcg} mcg dose requires{" "}
-                    {results.requiredVolumeMl} ml, which equals {results.requiredIU} iu.
-                  </p>
-                  <p>
-                    This vial provides about {results.dosesPerVial} doses at that
-                    amount.
-                  </p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
-              <p>1 mg = 1000 mcg</p>
-              <p>1 ml = 100 iu</p>
-              <p>1 iu = 0.01 ml</p>
+              />
             </div>
           </div>
-        </section>
 
-        <aside className="lg:sticky lg:top-6 lg:self-start">
-          <section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-[var(--color-text)]">
-                  Results
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                  Instant result summary based on your current inputs.
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
+              Syringe size
+            </label>
+            <select
+              value={selectedSyringeMl}
+              onChange={(e) => setSelectedSyringeMl(e.target.value)}
+              className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
+            >
+              {syringeOptions.map((option) => (
+                <option key={option.ml} value={option.ml}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {results ? (
+            <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4">
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                Quick summary
+              </p>
+              <div className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
+                <p>
+                  {results.vialMg} mg mixed with {results.mixingMl} ml creates a
+                  concentration of {results.concentrationMcgPerMl} mcg/ml.
+                </p>
+                <p>
+                  A {results.desiredMcg} mcg dose requires{" "}
+                  {results.requiredVolumeMl} ml, which equals {results.requiredIU} iu.
+                </p>
+                <p>
+                  This vial provides about {results.dosesPerVial} doses at that
+                  amount.
                 </p>
               </div>
-
-              {results ? (
-                <button
-                  type="button"
-                  onClick={handleCopyResult}
-                  className="inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
-                >
-                  {copied ? "Copied ✓" : "Copy"}
-                </button>
-              ) : null}
             </div>
+          ) : null}
 
-            {!results ? (
-              <p className="mt-6 text-sm text-[var(--color-muted)]">
-                Enter valid values to calculate results.
-              </p>
-            ) : (
-              <div className="mt-6 grid gap-4">
-                <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
-                    Main result
-                  </p>
-                  <p className="mt-3 text-4xl font-bold tracking-tight text-[var(--color-text)] sm:text-5xl">
-                    {results.requiredIU} IU
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--color-muted)]">
-                    Draw {results.requiredVolumeMl} ml for a {results.desiredMcg} mcg dose
-                  </p>
-                </div>
-
-                {results.exceedsSyringe ? (
-                  <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
-                    Warning: the required volume exceeds the selected syringe
-                    capacity. Choose a larger syringe or adjust the mix volume.
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-green-300 bg-green-50 p-4 text-sm text-green-700">
-                    The required volume fits within the selected syringe size.
-                  </div>
-                )}
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <ResultCard
-                    label="Concentration"
-                    value={`${results.concentrationMcgPerMl} mcg/ml`}
-                  />
-                  <ResultCard
-                    label="Per 0.01 ml"
-                    value={`${results.concentrationMcgPer01Ml} mcg`}
-                  />
-                  <ResultCard
-                    label="Required volume"
-                    value={`${results.requiredVolumeMl} ml`}
-                  />
-                  <ResultCard
-                    label="Syringe units"
-                    value={`${results.requiredIU} iu`}
-                  />
-                  <ResultCard
-                    label="Doses per vial"
-                    value={`${results.dosesPerVial}`}
-                  />
-                  <ResultCard
-                    label="Syringe capacity"
-                    value={`${results.syringeCapacityIU} iu`}
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
-                  <div className="mb-3">
-                    <p className="text-sm font-medium text-[var(--color-text)]">
-                      Visual syringe guide
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      Draw to {results.requiredIU} iu ({results.requiredVolumeMl} ml)
-                    </p>
-                  </div>
-
-                  <SyringeGraphic
-                    requiredIU={results.requiredIU}
-                    syringeCapacityIU={results.syringeCapacityIU}
-                  />
-                </div>
-              </div>
-            )}
-          </section>
-        </aside>
-      </div>
-
-      {results ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-border)] bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(0,0,0,0.06)] backdrop-blur sm:hidden">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-                Draw amount
-              </p>
-              <p className="truncate text-lg font-bold text-[var(--color-text)]">
-                {results.requiredIU} IU
-              </p>
-              <p className="text-xs text-[var(--color-muted)]">
-                {results.requiredVolumeMl} ml for {results.desiredMcg} mcg
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCopyResult}
-              className="shrink-0 rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-medium text-[var(--color-text)] shadow-sm transition hover:bg-[var(--color-surface-muted)]"
-            >
-              {copied ? "Copied ✓" : "Copy"}
-            </button>
+          <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
+            <p>1 mg = 1000 mcg</p>
+            <p>1 ml = 100 iu</p>
+            <p>1 iu = 0.01 ml</p>
           </div>
         </div>
-      ) : null}
-    </>
+      </section>
+
+      <aside className="lg:sticky lg:top-6 lg:self-start">
+        <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
+                Results
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+                Instant result summary based on your current inputs.
+              </p>
+            </div>
+          </div>
+
+          {!results ? (
+            <p className="mt-5 text-sm text-[var(--color-muted)]">
+              Enter valid values to calculate results.
+            </p>
+          ) : (
+            <div className="mt-5 grid gap-4">
+              <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  Main result
+                </p>
+                <p className="mt-3 text-4xl font-bold tracking-tight text-[var(--color-text)] sm:text-5xl">
+                  {results.requiredIU} IU
+                </p>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  Draw {results.requiredVolumeMl} ml for a {results.desiredMcg} mcg dose
+                </p>
+              </div>
+
+              {results.exceedsSyringe ? (
+                <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-700">
+                  Warning: the required volume exceeds the selected syringe
+                  capacity. Choose a larger syringe or adjust the mix volume.
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-green-300 bg-green-50 p-4 text-sm text-green-700">
+                  The required volume fits within the selected syringe size.
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ResultCard
+                  label="Concentration"
+                  value={`${results.concentrationMcgPerMl} mcg/ml`}
+                />
+                <ResultCard
+                  label="Per 0.01 ml"
+                  value={`${results.concentrationMcgPer01Ml} mcg`}
+                />
+                <ResultCard
+                  label="Required volume"
+                  value={`${results.requiredVolumeMl} ml`}
+                />
+                <ResultCard
+                  label="Syringe units"
+                  value={`${results.requiredIU} iu`}
+                />
+                <ResultCard
+                  label="Doses per vial"
+                  value={`${results.dosesPerVial}`}
+                />
+                <ResultCard
+                  label="Syringe capacity"
+                  value={`${results.syringeCapacityIU} iu`}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+                <div className="mb-3">
+                  <p className="text-sm font-medium text-[var(--color-text)]">
+                    Visual syringe guide
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    Draw to {results.requiredIU} iu ({results.requiredVolumeMl} ml)
+                  </p>
+                </div>
+
+                <SyringeGraphic
+                  requiredIU={results.requiredIU}
+                  syringeCapacityIU={results.syringeCapacityIU}
+                />
+              </div>
+            </div>
+          )}
+        </section>
+      </aside>
+    </div>
   );
 }
 
