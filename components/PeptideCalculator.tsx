@@ -22,6 +22,8 @@ const syringeOptions = [
   { label: "1.0 ml (100 iu)", ml: 1.0, iu: 100 },
 ];
 
+const commonDoseOptions = [100, 250, 500, 1000];
+
 function round(value: number, decimals = 2) {
   return Number(value.toFixed(decimals));
 }
@@ -53,6 +55,10 @@ export default function PeptideCalculator({
   const [selectedSyringeMl, setSelectedSyringeMl] = useState("1");
 
   const selectedPeptideName = initialPeptideName;
+
+  const activeCommonDose = commonDoseOptions.find(
+    (dose) => String(dose) === desiredAmountMcg
+  );
 
   const results = useMemo(() => {
     const vialMg = useCustomVial ? Number(customVialMg) : selectedVialMg;
@@ -104,21 +110,19 @@ export default function PeptideCalculator({
   ]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
       <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
-              Inputs
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-              Adjust the vial amount, mix volume, desired dose, and syringe size.
-            </p>
-          </div>
+        <div>
+          <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
+            Inputs
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+            Adjust the vial amount, mix volume, desired dose, and syringe size.
+          </p>
         </div>
 
         {selectedPeptideName ? (
-          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
             Calculator opened for:{" "}
             <span className="font-semibold">{selectedPeptideName}</span>
           </div>
@@ -178,7 +182,7 @@ export default function PeptideCalculator({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                How much BAC water are you adding (ml)?
+                BAC water (ml)
               </label>
               <input
                 type="number"
@@ -192,7 +196,7 @@ export default function PeptideCalculator({
 
             <div>
               <label className="mb-2 block text-sm font-medium text-[var(--color-text)]">
-                How much peptide do you want in each dose (mcg)?
+                Desired dose (mcg)
               </label>
               <input
                 type="number"
@@ -202,6 +206,27 @@ export default function PeptideCalculator({
                 onChange={(e) => setDesiredAmountMcg(e.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm"
               />
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {commonDoseOptions.map((dose) => {
+                  const active = activeCommonDose === dose;
+
+                  return (
+                    <button
+                      key={dose}
+                      type="button"
+                      onClick={() => setDesiredAmountMcg(String(dose))}
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        active
+                          ? "bg-[var(--color-accent)] text-white"
+                          : "border border-[var(--color-border)] bg-white text-[var(--color-text)] hover:border-[var(--color-accent)]"
+                      }`}
+                    >
+                      {dose} mcg
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -245,30 +270,30 @@ export default function PeptideCalculator({
           ) : null}
 
           <div className="rounded-2xl border bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-muted)]">
-            <p>1 mg = 1000 mcg</p>
-            <p>1 ml = 100 iu</p>
-            <p>1 iu = 0.01 ml</p>
+            <div className="grid gap-1 sm:grid-cols-3">
+              <p>1 mg = 1000 mcg</p>
+              <p>1 ml = 100 iu</p>
+              <p>1 iu = 0.01 ml</p>
+            </div>
           </div>
         </div>
       </section>
 
       <aside className="lg:sticky lg:top-6 lg:self-start">
         <section className="rounded-3xl border border-[var(--color-border)] bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
-                Results
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                Instant result summary based on your current inputs.
-              </p>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">
+              Results
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+              Instant result summary based on your current inputs.
+            </p>
           </div>
 
           {!results ? (
-            <p className="mt-5 text-sm text-[var(--color-muted)]">
+            <div className="mt-5 rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)]">
               Enter valid values to calculate results.
-            </p>
+            </div>
           ) : (
             <div className="mt-5 grid gap-4">
               <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:p-5">
@@ -350,7 +375,7 @@ function ResultCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
         {label}
       </p>
-      <p className="mt-2 text-xl font-bold tracking-tight text-[var(--color-text)] sm:text-2xl">
+      <p className="mt-2 text-lg font-bold tracking-tight text-[var(--color-text)] sm:text-2xl">
         {value}
       </p>
     </div>
@@ -488,7 +513,10 @@ function SyringeGraphic({
         ) : null}
 
         <rect
-          x={Math.max(barrelLeft, Math.min(stopperLeft, barrelRight - stopperWidth))}
+          x={Math.max(
+            barrelLeft,
+            Math.min(stopperLeft, barrelRight - stopperWidth)
+          )}
           y={barrelTop + 3}
           width={stopperWidth}
           height={barrelHeight - 6}
