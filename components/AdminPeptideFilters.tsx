@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Props = {
@@ -30,33 +30,33 @@ export default function AdminPeptideFilters({
     setCategory(initialCategory);
   }, [initialCategory]);
 
-  const currentParams = useMemo(
-    () => new URLSearchParams(searchParams.toString()),
-    [searchParams]
-  );
+  function buildNextUrl(nextQuery: string, nextCategory: string) {
+    const params = new URLSearchParams(searchParams.toString());
 
+    if (nextQuery.trim()) {
+      params.set("q", nextQuery.trim());
+    } else {
+      params.delete("q");
+    }
+
+    if (nextCategory.trim()) {
+      params.set("category", nextCategory.trim());
+    } else {
+      params.delete("category");
+    }
+
+    // Only reset page when filters actually change
+    params.delete("page");
+
+    return params.toString() ? `${pathname}?${params.toString()}` : pathname;
+  }
+
+  // Debounce search only
   useEffect(() => {
     const timeout = setTimeout(() => {
-      const params = new URLSearchParams(currentParams.toString());
+      if (query === initialQuery) return;
 
-      if (query.trim()) {
-        params.set("q", query.trim());
-      } else {
-        params.delete("q");
-      }
-
-      if (category.trim()) {
-        params.set("category", category.trim());
-      } else {
-        params.delete("category");
-      }
-
-      params.delete("page");
-
-      const next = params.toString()
-        ? `${pathname}?${params.toString()}`
-        : pathname;
-
+      const next = buildNextUrl(query, category);
       const current = searchParams.toString()
         ? `${pathname}?${searchParams.toString()}`
         : pathname;
@@ -69,30 +69,12 @@ export default function AdminPeptideFilters({
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [query, category, pathname, router, searchParams, currentParams]);
+  }, [query, initialQuery, category, pathname, router, searchParams]);
 
   function handleCategoryChange(value: string) {
     setCategory(value);
 
-    const params = new URLSearchParams(searchParams.toString());
-
-    if (query.trim()) {
-      params.set("q", query.trim());
-    } else {
-      params.delete("q");
-    }
-
-    if (value.trim()) {
-      params.set("category", value.trim());
-    } else {
-      params.delete("category");
-    }
-
-    params.delete("page");
-
-    const next = params.toString()
-      ? `${pathname}?${params.toString()}`
-      : pathname;
+    const next = buildNextUrl(query, value);
 
     startTransition(() => {
       router.replace(next);
@@ -102,6 +84,7 @@ export default function AdminPeptideFilters({
   function handleReset() {
     setQuery("");
     setCategory("");
+
     startTransition(() => {
       router.replace(pathname);
     });
