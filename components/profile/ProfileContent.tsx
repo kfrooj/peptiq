@@ -15,6 +15,7 @@ import {
 import type { ActionState } from "@/app/(protected)/profile/ProfileForms";
 import { sendPeptiqEmail } from "@/lib/email/resend";
 import { getPasswordChangedEmail } from "@/lib/email/templates/password-changed";
+import DeleteAccountSection from "@/components/DeleteAccountSection";
 
 type ProfileRow = {
   name: string | null;
@@ -97,8 +98,8 @@ function getSubscriptionCardMeta(args: {
           subscriptionPeriodEnd ? ` · Renews through ${subscriptionPeriodEnd}` : ""
         }`
       : subscriptionPeriodEnd
-        ? `Renews through ${subscriptionPeriodEnd}`
-        : "Subscription is active on this account.";
+      ? `Renews through ${subscriptionPeriodEnd}`
+      : "Subscription is active on this account.";
 
     return {
       supportingText:
@@ -489,8 +490,8 @@ export default async function ProfileContent() {
                         {accessSource === "admin_bypass"
                           ? "Admin access"
                           : accessSource === "subscription"
-                            ? "Subscriber"
-                            : "Pro access"}
+                          ? "Subscriber"
+                          : "Pro access"}
                       </span>
                     ) : null}
                   </div>
@@ -577,14 +578,6 @@ export default async function ProfileContent() {
                   >
                     Sign Out of All Devices (Coming Soon)
                   </button>
-
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-muted)]"
-                  >
-                    Delete Account (Coming Soon)
-                  </button>
                 </div>
               </div>
             </div>
@@ -621,6 +614,8 @@ export default async function ProfileContent() {
             <InviteFriendCard shareUrl="https://peptiq.uk/" />
           </SectionCard>
         </div>
+
+        <DeleteAccountSection />
       </div>
     </main>
   );

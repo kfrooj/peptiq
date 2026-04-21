@@ -161,8 +161,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     const callbackError = getCallbackErrorMessage(searchParams.get("error"));
+    const deleted = searchParams.get("deleted");
+
     if (callbackError) {
       setError(callbackError);
+      return;
+    }
+
+    if (deleted === "account") {
+      setError(null);
+      setMessage("Your account has been deleted successfully.");
     }
   }, [searchParams]);
 
@@ -462,8 +470,8 @@ export default function LoginPage() {
               ? "Logging in..."
               : "Creating account..."
             : isLogin
-              ? "Sign in"
-              : "Create account"}
+            ? "Sign in"
+            : "Create account"}
         </button>
 
         <div className="mt-4 flex flex-col items-center gap-3">
@@ -475,6 +483,13 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           ) : null}
+
+          <Link
+            href="/account-deletion"
+            className="text-sm text-[var(--color-muted)] transition hover:text-[var(--color-text)]"
+          >
+            Account deletion
+          </Link>
 
           <Link
             href="/"
